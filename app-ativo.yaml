@@ -1,0 +1,38 @@
+# apiVersion: v1
+# kind: Pod
+# metadata:
+#   name: app-ativo
+# spec:
+#   containers:
+#     - name: app
+#       image: cristianomafuz/teste:latest
+#       env:
+#         - name: MONGO_HOST
+#           value: mongo-service
+#         - name: POD_NAME
+#           value: app-ativo
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-principal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-principal
+  template:
+    metadata:
+      labels:
+        app: app-principal
+    spec:
+      containers:
+        - name: app
+          image: cristianomafuz/teste:latest
+          env:
+            - name: MONGO_HOST
+              value: mongo-service
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
