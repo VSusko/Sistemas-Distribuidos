@@ -1,26 +1,28 @@
-Para rodar tudo:
-(primeiro tenha certeza de que está com o kubectl certo e funcionando)
+## Para rodar tudo:
+# (primeiro tenha certeza de que está com o kubectl certo e funcionando)
 
 
+# 1. Aplique os manifests do MongoDB e do aplicativo
 kubectl apply -f mongo-deployment.yaml
-
 kubectl apply -f app-ativo.yaml
 
-(para verificar se está tudo rodando)
+# 2. Verifique se todos os recursos estão rodando
 kubectl get all
 
-(para deletar o pod e mostrar tolerancia a falha)
+
+# 1. Delete o pod do app para simular uma falha
 kubectl delete pod app-ativo
 
-(verificar na base de dados se está recebendo tudo certo mesmo assim)
+# 2. Verifique se o banco de dados continua recebendo os dados
 kubectl exec -it pod/mongo-689485f9f7-h9wxg -- bash
 
+# Dentro do container:
 mongosh
-
 use kube_db
 db.messages.find().pretty()
 
-(para scrollar)
+# Para navegar entre os registros:
 it
 
-PRONTO :)
+
+## PRONTO :)
