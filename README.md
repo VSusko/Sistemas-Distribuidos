@@ -4,6 +4,7 @@
 
 ## 1. Aplique os manifests do MongoDB e do aplicativo
 kubectl apply -f mongo-deployment.yaml
+
 kubectl apply -f app-ativo.yaml
 
 ## 2. Verifique se todos os recursos estão rodando
