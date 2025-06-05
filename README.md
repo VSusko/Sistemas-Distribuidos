@@ -19,7 +19,9 @@ kubectl exec -it pod/mongo-689485f9f7-h9wxg -- bash
 
 ## Dentro do container:
 mongosh
+
 use kube_db
+
 db.messages.find().pretty()
 
 ## Para navegar entre os registros:
