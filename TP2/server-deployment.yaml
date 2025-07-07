@@ -1,0 +1,66 @@
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: server
+# spec:
+#   replicas: 5
+#   selector:
+#     matchLabels:
+#       app: server
+#   template:
+#     metadata:
+#       labels:
+#         app: server
+#     spec:
+#       containers:
+#       - name: server
+#         image: cristianomafuz/server:latest
+#         ports:
+#         - containerPort: 8080
+#         env:
+#         - name: NODE_NAME
+#           valueFrom:
+#             fieldRef:
+#               fieldPath: metadata.name
+#         - name: REDIS_HOST
+#           value: redis
+
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: server-service
+# spec:
+#   selector:
+#     app: server
+#   ports:
+#     - protocol: TCP
+#       port: 8080
+#       targetPort: 8080
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: server
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: server
+  template:
+    metadata:
+      labels:
+        app: server
+    spec:
+      containers:
+      - name: server
+        image: cristianomafuz/server:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: PEERS
+          value: "server-0,server-1,server-2"
