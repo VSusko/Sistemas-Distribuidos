@@ -6,7 +6,7 @@ import requests    # Usado para enviar requisições HTTP entre os containers
 DEBUG = 1  # Flag de debug (pode ser usada para ativar prints mais detalhados)
 
 # Número de clientes (threads) que serão executadas simultaneamente
-CLIENTS_NUMBER = 5
+CLIENTS_NUMBER = 1
 
 # Função que define o comportamento de cada cliente (executada por cada thread)
 def cliente_thread(cliente_id, sync_host):
@@ -23,7 +23,7 @@ def cliente_thread(cliente_id, sync_host):
 
     try:
         # Envia a requisição HTTP POST para o nó especificado do Cluster Sync
-        response = requests.post(f'http://{sync_host}:5000/acesso', json=message)
+        response = requests.post(f'http://{sync_host}:5000/client_request', json=message)
 
         # Se a resposta for sucesso (200) e status COMMITTED, confirma a escrita
         if response.status_code == 200 and response.json().get("status") == "COMMITTED":
