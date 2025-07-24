@@ -25,19 +25,29 @@ restart-server:
 	kubectl rollout restart statefulset server
 
 # --- Regras de conveniência ---
+
+# Para criar os pods
 apply:
 	kubectl apply -f server-statefulset.yaml
 	kubectl apply -f client-statefulset.yaml
 
-server: kubectl apply -f server-statefulset.yaml
+# Para criar apenas os pods de server
+server: 
+	kubectl apply -f server-statefulset.yaml
 
-client: kubectl apply -f client-statefulset.yaml
+# Para criar apenas os pods de cliente
+client: 
+	kubectl apply -f client-statefulset.yaml
 
-delete:
+# Para deletar os pods
+delete:	
 	kubectl delete all --all
 
-al: build-client push-client build-server push-server
+# Para fazer o build e push do cliente e server
+build: build-client push-client build-server push-server
 
-refresh: delete
+# Para fazer o build,push e criar todos os pods
+b-app: build apply
 
+# Para fazer build,push e resetar pods (as vezes nao funciona, melhor usar "make delete" seguido de "make b-app")
 all: build-client push-client restart-client build-server push-server restart-server

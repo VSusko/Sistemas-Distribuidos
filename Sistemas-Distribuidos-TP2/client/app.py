@@ -27,6 +27,7 @@ while commit_counter < TOTAL_COMMITS:
     try:
         # Gera um timestamp atual
         timestamp = time.time()
+        print(f'[{pod_name}] timestamp: {timestamp}')
 
         # Envia uma requisição POST para /elect no servidor-alvo
         time.sleep(0.5)

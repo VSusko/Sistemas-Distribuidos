@@ -6,9 +6,11 @@
 
 # Comandos makefile
 
-* Depois, basta fazer "make al" (com apenas 1 l mesmo). Se voce alterou os arquivos e quer ver as modificações, o seu docker vai ser atualizado com o novo arquivo alterado. Caso contrário, vai pegar a versão que tem salva aí.
+* Depois, basta fazer "make build". Se voce alterou os arquivos e quer ver as modificações, o seu docker vai ser atualizado com o novo arquivo alterado. Caso contrário, vai pegar a versão que tem salva aí.
 
 * Agora use o comando "make apply" que o kubernetes vai criar todos os pods.
+
+* Alternativamente, o comando make b-app faz os dois últimos na sequência
 
 # OBS
 
