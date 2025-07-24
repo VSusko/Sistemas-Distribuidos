@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
       - name: server
-        image: cristianomafuz/server:latest
+        image: victorsusko/server:latest
         ports:
         - containerPort: 8080
         env:

@@ -1,5 +1,5 @@
-IMAGE_CLIENT = cristianomafuz/client:latest
-IMAGE_SERVER = cristianomafuz/server:latest
+IMAGE_CLIENT = victorsusko/client:latest
+IMAGE_SERVER = victorsusko/server:latest
 
 # .PHONY garante que o make execute o comando mesmo que um arquivo com esse nome exista
 .PHONY: all build-client push-client restart-client build-server push-server restart-server apply server client 

@@ -7,7 +7,7 @@ metadata:
 spec:
   containers:
   - name: client
-    image: cristianomafuz/client:latest
+    image: victorsusko/client:latest
     env:
     - name: POD_NAME
       value: client-0
@@ -21,7 +21,7 @@ metadata:
 spec:
   containers:
   - name: client
-    image: cristianomafuz/client:latest
+    image: victorsusko/client:latest
     env:
     - name: POD_NAME
       value: client-1
@@ -35,7 +35,7 @@ metadata:
 spec:
   containers:
   - name: client
-    image: cristianomafuz/client:latest
+    image: victorsusko/client:latest
     env:
     - name: POD_NAME
       value: client-2
@@ -49,7 +49,7 @@ metadata:
 spec:
   containers:
   - name: client
-    image: cristianomafuz/client:latest
+    image: victorsusko/client:latest
     env:
     - name: POD_NAME
       value: client-3
@@ -63,7 +63,7 @@ metadata:
 spec:
   containers:
   - name: client
-    image: cristianomafuz/client:latest
+    image: victorsusko/client:latest
     env:
     - name: POD_NAME
       value: client-4

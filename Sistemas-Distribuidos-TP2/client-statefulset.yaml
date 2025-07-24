@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
       - name: client
-        image: cristianomafuz/client:latest
+        image: victorsusko/client:latest
         env:
         - name: POD_NAME
           valueFrom:
