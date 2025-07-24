@@ -10,7 +10,10 @@
 
 * Agora use o comando "make apply" que o kubernetes vai criar todos os pods.
 
-* Alternativamente, o comando make b-app faz os dois últimos na sequência
+# Ver containers e logs
+
+* O comando "kubectl get pods" permite ver quantos e quais pods foram criados. Uma vez que o pod estiver com o status "RUNNING", é possivel visualizar o log dele com o comando "kubectl logs [nomedopod]". Os pods aqui estão dispostos de client-0 a client-4 e de server-0 a server-4.
+* Vale dizer que o comando "kubectl logs [nomedopod]" vai mostrar o log até o momento em que voce digitou esse comando. Alternativamente, é possível acompanhar em tempo real o log do pod com a diretiva '-f', então o comando fica "kubectl -f logs [nomedopod]". Para sair desse modo, aperte CTRL+C
 
 # OBS
 
