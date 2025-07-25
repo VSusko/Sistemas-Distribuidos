@@ -20,3 +20,5 @@
 # OBS
 
 * Pode acontecer de quando voce mudar os arquivos, as alterações não aparecerem visivelmente. Se isso acontecer, delete o cluster com "make delete" e depois faça a parte 'Comandos makefile' de novo
+
+* Alternativamente, o comando "make restart" faz tudo isso

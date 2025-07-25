@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify  # Framework web e utilitários para r
 import time                                # Para marcar timestamps e simular uso da região crítica
 import os                                  # Para acessar variáveis de ambiente (ex: nome do nó)
 import requests                            # Para enviar requisições HTTP para outros nós
-import threading                           # Para permitir o congelamento do processo até que receba outros oks
 
 # Inicializa a aplicação Flask
 app = Flask(__name__)  
@@ -19,9 +18,6 @@ has_client_request = False       # Flag que simboliza a existência de um client
 my_client_timestamp = None       # Timestamp do cliente atual
 deferred_replies = []            # Lista de nós que pediram e foram adiados
 ok_counter = 1                   # Contador de oks
-
-# elect_wait_event = threading.Event()  # Evento que controla quando a rota /elect pode continuar
-
 ready_to_continue = False # Flag para 
 
 
@@ -34,9 +30,16 @@ def add_and_sort(new_request):
     deferred_replies.sort(key=lambda x: (x["timestamp"], x["node"]))  # desempata pelo nome do nó
 
 # Função que simula uma entrada na região crítica
-def critical_region():
-    print(f"🟢 [{node_name}] >>> Entrou na região crítica! ✅", flush=True)
-    time.sleep(3)  # Simula o uso da RC por 3 segundos
+def critical_region(timestamp, name):
+    critical_response = requests.post(f"http://critical:8080/critical", json={"timestamp": timestamp,"node": name}, timeout=1)
+    
+    if critical_response.status_code == 200:
+        print(f"🟢 [{node_name}] >>> Entrou na região crítica! ✅", flush=True)
+        time.sleep(3)  # Simula o uso da RC por 3 segundos
+    else:
+        print(f"❌ [{node_name}] >>> Não foi possível utilizar a região crítica!", flush=True)
+    
+    return
 
 
 # Rota chamada por outros nós do cluster pedindo permissão para acessar a região crítica
@@ -83,9 +86,6 @@ def release():
     print(f'\n[Rota release] | [{node_name}] | RECEBI O RELEASE, OK COUNT --> {ok_counter} E QTT NECESSÁRIA --> {len(peer_list)}\n')
     
     ready_to_continue = True
-    
-    print("VOLTA CALABRESO")
-    
     return "", 200
     
 
@@ -132,7 +132,7 @@ def elect():
 
     # Se recebeu OK de todos os peers (exceto ele mesmo), entra na RC
     print(f'\n[Rota elect] | [{node_name}] | OK COUNTER --> {ok_counter}')
-    critical_region()
+    critical_region(my_client_timestamp,node_name)
     print(f"[Rota elect] | [{node_name}] | 🔴 saiu da RC", flush=True)
 
 
@@ -150,7 +150,13 @@ def elect():
 
     print(f"[Rota elect] | [{node_name}] | 🟢 Mandando a mensagem de commit para o cliente", flush=True)
     return jsonify({"status": "COMMITTED"}), 200
-    
+   
+# Tá vivo? 
+@app.route("/isalive", methods=["GET"])
+def isalive():
+    return "", 200
+
+
 # Inicia o servidor Flask escutando em todas as interfaces, na porta 8080
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)

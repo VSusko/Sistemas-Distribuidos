@@ -10,6 +10,22 @@ TOTAL_COMMITS = 50
 # Exemplo: "client-2"
 pod_name = os.getenv("POD_NAME", "client-0")  # Usa "client-0" se não encontrar
 
+# Verificação inicial: aguarda todos os servidores estarem prontos
+for i in range(5):
+    final_server = f"server-{i}.server"
+    print(f"[{pod_name}]: Tentando conexão com servidor [{final_server}]")
+    
+    while True:
+        try:
+            response = requests.get(f"http://{final_server}:8080/isalive", timeout=1)
+            if response.status_code == 200:
+                print(f"✅ [{pod_name}]: Conexão com [{final_server}] estabelecida!")
+                break
+        except Exception as e:
+            print(f"⏳ [{pod_name}]: {final_server} ainda não disponível...")
+
+        time.sleep(1)  # Espera 1 segundo antes de tentar de novo
+
 # Extrai o número final do nome do pod (ordinal)
 # Ex: "client-2" → 2
 ordinal = int(pod_name.split("-")[-1])
@@ -18,12 +34,12 @@ ordinal = int(pod_name.split("-")[-1])
 # Ex: server-2.server
 target_server = f"server-{ordinal}.server"
 
-print(f"🔵 [{pod_name}] falando com servidor: {target_server}")
-
 commit_counter = 0
+print(f"🔵 [{pod_name}] falando com servidor: {target_server}")
 # Loop infinito: envia uma requisição a cada 5 segundos
 while commit_counter < TOTAL_COMMITS:
     print(f'[{pod_name}]: tentativa de escrita número {commit_counter}', flush=True)
+    
     try:
         # Gera um timestamp atual
         timestamp = time.time()
