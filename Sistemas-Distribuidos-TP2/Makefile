@@ -35,6 +35,9 @@ push-critical:
 restart-critical:
 	kubectl rollout restart statefulset server
 
+delete:
+	kubectl delete all --all
+
 # --- Regras de conveniência ---
 
 # Para criar os pods
