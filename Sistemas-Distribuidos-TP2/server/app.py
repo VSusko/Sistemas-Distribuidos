@@ -18,7 +18,7 @@ has_client_request = False       # Flag que simboliza a existência de um client
 my_client_timestamp = None       # Timestamp do cliente atual
 deferred_replies = []            # Lista de nós que pediram e foram adiados
 ok_counter = 1                   # Contador de oks
-ready_to_continue = False # Flag para 
+ready_to_continue = False        # Flag para controle de parada do servidor
 
 
 # Função que adiciona um nó na lista de dicionário [timestamp, node] e depois ordena
@@ -136,7 +136,7 @@ def elect():
     print(f"[Rota elect] | [{node_name}] | 🔴 saiu da RC", flush=True)
 
 
-    ready_to_continue = False  # Reset da flag de continuar
+    ready_to_continue = False  # Reset da flag de parada
     has_client_request = False # Reset da flag de cliente
     ok_counter = 0             # Reset do contador de oks
 
