@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: critical
 spec:
-  clusterIP: None  # Headless service!
+  clusterIP: None  # Headless service para DNS interno
   selector:
     app: critical
   ports:
@@ -19,7 +19,23 @@ metadata:
 spec:
   containers:
   - name: critical
-    image: victorsusko/critical_server:latest
+    image: victorsusko/critical_server:web
     env:
     - name: POD_NAME
       value: critical.server
+    ports:
+    - containerPort: 8080
+---
+# Novo serviço NodePort para acesso externo
+apiVersion: v1
+kind: Service
+metadata:
+  name: critical-nodeport
+spec:
+  type: NodePort
+  selector:
+    app: critical
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30086

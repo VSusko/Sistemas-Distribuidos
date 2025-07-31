@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify  # Framework web e utilitários para requisições/respostas
+from flask import Flask, request, jsonify, render_template  # Framework web e utilitários para requisições/respostas
 import time                                # Para marcar timestamps e simular uso da região crítica
 import os                                  # Para acessar variáveis de ambiente (ex: nome do nó)
 import requests                            # Para enviar requisições HTTP para outros nós
@@ -20,6 +20,10 @@ deferred_replies = []            # Lista de nós que pediram e foram adiados
 ok_counter = 1                   # Contador de oks
 ready_to_continue = False        # Flag para controle de parada do servidor
 
+# Variaveis da web
+event_log = []  # Armazena os eventos para mostrar na interface
+
+# =================== FUNCOES AUXILIARES ===================
 
 # Função que adiciona um nó na lista de dicionário [timestamp, node] e depois ordena
 def add_and_sort(new_request):
@@ -41,6 +45,7 @@ def critical_region(timestamp, name):
     
     return
 
+# =================== ROTAS PARA O PROTOCOLO DE COMUNICACAO ===================
 
 # Rota chamada por outros nós do cluster pedindo permissão para acessar a região crítica
 @app.route("/request", methods=["POST"])
@@ -99,6 +104,8 @@ def elect():
     my_client_timestamp = data.get("timestamp")   # Obtendo timestamp do cliente
     client_name = data.get("client_name")         # Obtendo nome do cliente
     print(f"\n[Rota elect] | [{node_name}] | 📡 recebeu pedido do cliente (ts={my_client_timestamp:.4f}), com nome {client_name}", flush=True)
+    
+    event_log.append(f"[{time.strftime('%H:%M:%S')}] Pedido de \"{client_name}\" recebido com timestamp {my_client_timestamp}")
 
     # Para cada nó do cluster sync, enviar um pedido com o timestamp do cliente:
     for peer in peer_list:
@@ -155,6 +162,16 @@ def elect():
 @app.route("/isalive", methods=["GET"])
 def isalive():
     return "", 200
+
+
+# =================== ROTAS PARA A PAGINA WEB ===================
+@app.route('/')
+def home():
+    return render_template('index.html', node_name=node_name)
+
+@app.route('/api/logs')
+def get_logs():
+    return jsonify(event_log[-50:])  # Retorna os últimos 50 eventos (para não sobrecarregar)
 
 
 # Inicia o servidor Flask escutando em todas as interfaces, na porta 8080

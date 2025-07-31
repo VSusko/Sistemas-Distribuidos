@@ -3,12 +3,12 @@ kind: Service
 metadata:
   name: server
 spec:
-  clusterIP: None  # Headless service!
+  clusterIP: None
   selector:
     app: server
   ports:
-    - port: 8080
-      targetPort: 8080
+  - port: 8080
+    targetPort: 8080
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
       - name: server
-        image: victorsusko/server:latest
+        image: victorsusko/server:web
         ports:
         - containerPort: 8080
         env:
@@ -37,3 +37,68 @@ spec:
               fieldPath: metadata.name
         - name: PEERS
           value: "server-0.server,server-1.server,server-2.server,server-3.server,server-4.server"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-0-nodeport
+spec:
+  selector:
+    statefulset.kubernetes.io/pod-name: server-0
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30081
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-1-nodeport
+spec:
+  selector:
+    statefulset.kubernetes.io/pod-name: server-1
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30082
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-2-nodeport
+spec:
+  selector:
+    statefulset.kubernetes.io/pod-name: server-2
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30083
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-3-nodeport
+spec:
+  selector:
+    statefulset.kubernetes.io/pod-name: server-3
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30084
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: server-4-nodeport
+spec:
+  selector:
+    statefulset.kubernetes.io/pod-name: server-4
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30085

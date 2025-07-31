@@ -1,6 +1,7 @@
-IMAGE_CLIENT = victorsusko/client:latest
-IMAGE_SERVER = victorsusko/server:latest
-IMAGE_CRITICAL = victorsusko/critical_server:latest
+IMAGE_CLIENT = victorsusko/client:web
+IMAGE_INTERACTIVE_CLIENT = victorsusko/client-interactive:web
+IMAGE_SERVER = victorsusko/server:web
+IMAGE_CRITICAL = victorsusko/critical_server:web
 
 # .PHONY garante que o make execute o comando mesmo que um arquivo com esse nome exista
 .PHONY: all build-client push-client restart-client build-server push-server restart-server apply server client 
@@ -11,6 +12,12 @@ build-client:
 
 push-client:
 	docker push $(IMAGE_CLIENT)
+
+build-i_client:
+	docker build -t $(IMAGE_INTERACTIVE_CLIENT) ./interactive_client
+
+push-i_client:
+	docker push $(IMAGE_INTERACTIVE_CLIENT)
 
 restart-client:
 	kubectl rollout restart statefulset client
@@ -61,10 +68,10 @@ client:
 # Para deletar os pods
 restart-cluster:	
 	kind delete cluster
-	kind create cluster
+	kind create cluster --config kind-config.yaml
 
 # Para fazer o build e push do cliente e server
-build: build-client push-client build-server push-server build-critical push-critical
+build: build-client push-client build-i_client push-i_client build-server push-server build-critical push-critical
 
 # Para fazer o build,push e criar todos os pods
 b-app: build server critical client

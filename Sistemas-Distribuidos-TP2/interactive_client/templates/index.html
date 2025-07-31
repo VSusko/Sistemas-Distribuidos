@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Cliente Interativo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Enviar Pedido</h1>
+        <div class="form-container">
+            <input type="text" id="client_name" name="client_name" placeholder="Nome do Cliente" required>
+            <button type="submit" onclick="enviarFormulario()">Enviar</button>
+        </div>
+        <h2>Resultados</h2>
+        <div id="resultados"></div>
+    </div>
+
+    <script>
+        async function enviarFormulario() {
+            const clientName = document.getElementById('client_name').value;
+            const resultadosDiv = document.getElementById('resultados');
+
+            if (!clientName) {
+                alert('Por favor, insira um nome.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({ client_name: clientName })
+                });
+
+                const result = await response.json();
+                const p = document.createElement('p');
+
+                if (result.status === 'success') {
+                    // Formata o timestamp para uma data legível
+                    p.innerText = `Nome: ${result.client_name}, Timestamp: ${result.timestamp}, Mensagem: ${result.commit_message}`;
+                    resultadosDiv.appendChild(p);
+                    document.getElementById('client_name').value = ''; // Limpa o campo
+                } else {
+                    p.innerText = `Erro: ${result.message}`;
+                    resultadosDiv.appendChild(p);
+                    alert('Erro: ' + result.message);
+                }
+            } catch (err) {
+                const p = document.createElement('p');
+                p.innerText = `Erro na comunicação: ${err.message}`;
+                resultadosDiv.appendChild(p);
+                alert('Erro na comunicação: ' + err.message);
+            }
+        }
+    </script>
+</body>
+</html>

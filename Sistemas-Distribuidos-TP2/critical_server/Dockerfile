@@ -6,11 +6,18 @@ RUN apt update && apt install -y curl
 # Cria diretório da aplicação
 WORKDIR /app
 
-# Copia os arquivos
+# Copia os arquivos de dependências e instala
 COPY ../requirements.txt .
 RUN pip install -r requirements.txt
 
+# Copia o arquivo principal do app
 COPY app.py .
+
+# Copia a pasta templates (HTML)
+COPY templates/ templates/
+
+# Copia a pasta static (CSS, JS, imagens)
+COPY static/ static/
 
 # Expõe a porta do Flask
 EXPOSE 8080

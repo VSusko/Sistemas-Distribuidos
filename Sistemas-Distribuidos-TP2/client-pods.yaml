@@ -3,14 +3,16 @@ kind: Pod
 metadata:
   name: client-0
   labels:
-    app: client
+    app: client-interactive
 spec:
   containers:
   - name: client
-    image: victorsusko/client:latest
+    image: victorsusko/client-interactive:web
     env:
     - name: POD_NAME
       value: client-0
+    ports:
+    - containerPort: 8080
 ---
 apiVersion: v1
 kind: Pod
@@ -21,7 +23,7 @@ metadata:
 spec:
   containers:
   - name: client
-    image: victorsusko/client:latest
+    image: victorsusko/client:web
     env:
     - name: POD_NAME
       value: client-1
@@ -35,7 +37,7 @@ metadata:
 spec:
   containers:
   - name: client
-    image: victorsusko/client:latest
+    image: victorsusko/client:web
     env:
     - name: POD_NAME
       value: client-2
@@ -49,7 +51,7 @@ metadata:
 spec:
   containers:
   - name: client
-    image: victorsusko/client:latest
+    image: victorsusko/client:web
     env:
     - name: POD_NAME
       value: client-3
@@ -63,8 +65,21 @@ metadata:
 spec:
   containers:
   - name: client
-    image: victorsusko/client:latest
+    image: victorsusko/client:web
     env:
     - name: POD_NAME
       value: client-4
-
+--- # Para o cliente interativo
+apiVersion: v1
+kind: Service
+metadata:
+  name: client-0-service
+spec:
+  selector:
+    app: client-interactive
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+      nodePort: 30080  
+  type: NodePort
