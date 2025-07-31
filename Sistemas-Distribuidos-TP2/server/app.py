@@ -21,7 +21,7 @@ ok_counter = 1                   # Contador de oks
 ready_to_continue = False        # Flag para controle de parada do servidor
 
 # Variaveis da web
-event_log = []  # Armazena os eventos para mostrar na interface
+event_log = []  # Armazena os eventos para mostrar na interface web
 
 # =================== FUNCOES AUXILIARES ===================
 
@@ -166,21 +166,23 @@ def elect():
     print(f"[Rota elect] | [{node_name}] | 🟢 Mandando a mensagem de commit para o cliente", flush=True)
     return jsonify({"status": "COMMITTED"}), 200
    
-# Tá vivo? 
+# Rota que devolve a requisição de estabelecimento da conexão com os clientes
 @app.route("/isalive", methods=["GET"])
 def isalive():
     return "", 200
 
 
 # =================== ROTAS PARA A PAGINA WEB ===================
+
+# Rota para carregar a página web ao iniciar
 @app.route('/')
 def home():
     return render_template('index.html', node_name=node_name)
 
+# Rota que retorna os últimos logs do servidor
 @app.route('/api/logs')
 def get_logs():
     return jsonify(event_log[-50:])  # Retorna os últimos 50 eventos 
-
 
 # Inicia o servidor Flask escutando em todas as interfaces, na porta 8080
 if __name__ == "__main__":

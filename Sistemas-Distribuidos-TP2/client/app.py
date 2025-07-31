@@ -1,7 +1,7 @@
 import os       # Acesso a variáveis de ambiente
 import time     # Para timestamps e pausas
 import requests # Para enviar requisições HTTP
-import random   
+import random   # Para fazer a espera randomica após o commit
 
 # Numero total de commits a serem requesitados pelo cliente
 TOTAL_COMMITS = 50
@@ -10,7 +10,7 @@ TOTAL_COMMITS = 50
 # Exemplo: "client-2"
 pod_name = os.getenv("POD_NAME", "client-0")  # Usa "client-0" se não encontrar
 
-# Verificação inicial: aguarda todos os servidores estarem prontos
+# Etapa de verificação: espera todos os servidores estarem prontos
 for i in range(5):
     final_server = f"server-{i}.server"
     print(f"[{pod_name}]: Tentando conexão com servidor [{final_server}]")
@@ -62,4 +62,4 @@ while commit_counter < TOTAL_COMMITS:
         print(f"[{pod_name}] Escreveu no recurso R.", flush=True)
         time.sleep(random.randint(1, 5))
     
-    commit_counter+=1
+    commit_counter+=1 # Incrementando o contador de commit
