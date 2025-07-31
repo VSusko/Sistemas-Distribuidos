@@ -39,6 +39,7 @@ def critical_region(timestamp, name):
     
     if critical_response.status_code == 200:
         print(f"🟢 [{node_name}] >>> Entrou na região crítica! ✅", flush=True)
+        event_log.append(f"{node_name} Entrou na região crítica!")
         time.sleep(3)  # Simula o uso da RC por 3 segundos
     else:
         print(f"❌ [{node_name}] >>> Não foi possível utilizar a região crítica!", flush=True)
@@ -52,13 +53,15 @@ def critical_region(timestamp, name):
 def on_request():
     global node_name, has_client_request, my_client_timestamp, deferred_replies
     
-    if has_client_request == False: # Caso em que o nó não possui nenhum pedido de cliente
-        return jsonify({"status": "OK"}), 200
-
     # Extrai o JSON enviado pelo outro nó
     message = request.json                         
     their_ts = message["timestamp"]
     their_node = message["node"]
+    
+    if has_client_request == False: # Caso em que o nó não possui nenhum pedido de cliente
+        event_log.append(f"Pedido de {their_node} recebido. O servidor {node_name} não possui cliente. Devolvendo OK...")
+        return jsonify({"status": "OK"}), 200
+
 
     # Se o timestamp do meu cliente é menor do que o pedido, peça a ele para esperar
     print(f"[Rota request] | [{node_name}] | ✅ {their_node} está pedindo OK (ts_dele={their_ts:.4f}) - (ts_meu={my_client_timestamp:.4f}), array:", flush=True)
@@ -69,14 +72,16 @@ def on_request():
         print(f"[Rota request] | [{node_name}] | NÓ PENDENTE: {pending_node}")
         add_and_sort(pending_node)
         print(f'[Rota request] | [{node_name}] | DEPOIS --> {deferred_replies}')
+        event_log.append(f"Pedido de {their_node} recebido, com timestamp {their_ts:.4f}. O servidor {node_name} possui timestamp menor: {my_client_timestamp:.4f}. Devolvendo WAIT")
         
         return jsonify({"status": "WAIT"}), 202
     
     else:
         # Caso contrário, responde com "OK", permitindo o acesso à RC
         print(f"✅ [Rota request] | [{node_name}] deu OK para {their_node} (ts={their_ts:.4f})", flush=True)
-        
         print(f'[Rota request] | [{node_name}] | DEPOIS --> {deferred_replies}')
+        
+        event_log.append(f"Pedido de {their_node} recebido, com timestamp {their_ts:.4f}. O servidor {node_name} possui timestamp maior: {my_client_timestamp:.4f}. Devolvendo OK")
         
         return jsonify({"status": "OK"}), 200
     
@@ -89,6 +94,7 @@ def release():
     # Se a rota foi chamada, aumenta o contador de ok
     ok_counter += 1
     print(f'\n[Rota release] | [{node_name}] | RECEBI O RELEASE, OK COUNT --> {ok_counter} E QTT NECESSÁRIA --> {len(peer_list)}\n')
+    event_log.append(f"Release recebido. OK COUNT = {ok_counter}, quantidade de OKs necessarios: {len(peer_list)}")
     
     ready_to_continue = True
     return "", 200
@@ -126,11 +132,13 @@ def elect():
             if peers_response.status_code == 200:  
                 ok_counter += 1
                 print(f'[Rota elect] | [{node_name}] | recebeu OK de {peer} --> {ok_counter}')
+                event_log.append(f"{node_name} recebeu OK de {peer}")
                 
             # Se recebeu "WAIT"
             if peers_response.status_code == 202:  
                 print(f'[Rota elect] | [{node_name}] | recebeu WAIT de {peer}')
                 print(f"[Rota elect] | [{node_name}] | 🕑 Esperando permissão para continuar...", flush=True)
+                event_log.append(f"{node_name} recebeu WAIT de {peer}")
                 while not ready_to_continue:
                     time.sleep(0.1)  # Espera 100ms antes de checar novamente
 
@@ -171,7 +179,7 @@ def home():
 
 @app.route('/api/logs')
 def get_logs():
-    return jsonify(event_log[-50:])  # Retorna os últimos 50 eventos (para não sobrecarregar)
+    return jsonify(event_log[-50:])  # Retorna os últimos 50 eventos 
 
 
 # Inicia o servidor Flask escutando em todas as interfaces, na porta 8080

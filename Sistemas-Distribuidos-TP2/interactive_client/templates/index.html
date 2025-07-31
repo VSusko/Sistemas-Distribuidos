@@ -10,7 +10,7 @@
         <h1>Enviar Pedido</h1>
         <div class="form-container">
             <input type="text" id="client_name" name="client_name" placeholder="Nome do Cliente" required>
-            <button type="submit" onclick="enviarFormulario()">Enviar</button>
+            <button type="submit" id="enviar" onclick="enviarFormulario()">Enviar</button>
         </div>
         <h2>Resultados</h2>
         <div id="resultados"></div>
@@ -20,11 +20,16 @@
         async function enviarFormulario() {
             const clientName = document.getElementById('client_name').value;
             const resultadosDiv = document.getElementById('resultados');
+            const button = document.getElementById('enviar');
 
             if (!clientName) {
                 alert('Por favor, insira um nome.');
                 return;
             }
+
+            // Desabilitar o botão durante o envio
+            button.disabled = true;
+            button.textContent = 'Enviando...';
 
             try {
                 const response = await fetch('/', {
@@ -36,25 +41,47 @@
                 });
 
                 const result = await response.json();
-                const p = document.createElement('p');
+                const resultBox = document.createElement('div');
+                resultBox.className = result.status === 'success' ? 'result-box success' : 'result-box error';
 
                 if (result.status === 'success') {
-                    // Formata o timestamp para uma data legível
-                    p.innerText = `Nome: ${result.client_name}, Timestamp: ${result.timestamp}, Mensagem: ${result.commit_message}`;
-                    resultadosDiv.appendChild(p);
+                    resultBox.innerHTML = `
+                        <div class="result-item"><span class="result-label">Nome:</span> ${result.client_name}</div>
+                        <div class="result-item"><span class="result-label">Timestamp:</span> ${result.timestamp}</div>
+                        <div class="result-item"><span class="result-label">Data e Hora:</span> ${new Date(result.timestamp * 1000).toLocaleString('pt-BR')}</div>
+                        <div class="result-item"><span class="result-label">Mensagem:</span> ${result.commit_message}</div>
+                    `;
+                    resultadosDiv.prepend(resultBox); // Adiciona no topo
                     document.getElementById('client_name').value = ''; // Limpa o campo
                 } else {
-                    p.innerText = `Erro: ${result.message}`;
-                    resultadosDiv.appendChild(p);
+                    resultBox.innerHTML = `
+                        <div class="result-item"><span class="result-label">Erro:</span> ${result.message}</div>
+                    `;
+                    resultadosDiv.prepend(resultBox);
                     alert('Erro: ' + result.message);
                 }
             } catch (err) {
-                const p = document.createElement('p');
-                p.innerText = `Erro na comunicação: ${err.message}`;
-                resultadosDiv.appendChild(p);
+                const resultBox = document.createElement('div');
+                resultBox.className = 'result-box error';
+                resultBox.innerHTML = `
+                    <div class="result-item"><span class="result-label">Erro na comunicação:</span> ${err.message}</div>
+                `;
+                resultadosDiv.prepend(resultBox);
                 alert('Erro na comunicação: ' + err.message);
+            } finally {
+                // Reabilitar o botão após a resposta
+                button.disabled = false;
+                button.textContent = 'Enviar';
             }
         }
+
+        // Capturar tecla Enter no input
+        document.getElementById('client_name').addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault(); // Evitar comportamento padrão
+                enviarFormulario();
+            }
+        });
     </script>
 </body>
 </html>
