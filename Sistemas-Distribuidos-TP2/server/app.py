@@ -47,58 +47,11 @@ def critical_region(timestamp, name):
     return
 
 # =================== ROTAS PARA O PROTOCOLO DE COMUNICACAO ===================
-
-# Rota chamada por outros nós do cluster pedindo permissão para acessar a região crítica
-@app.route("/request", methods=["POST"])
-def on_request():
-    global node_name, has_client_request, my_client_timestamp, deferred_replies
-    
-    # Extrai o JSON enviado pelo outro nó
-    message = request.json                         
-    their_ts = message["timestamp"]
-    their_node = message["node"]
-    
-    if has_client_request == False: # Caso em que o nó não possui nenhum pedido de cliente
-        event_log.append(f"Pedido de {their_node} recebido. O servidor {node_name} não possui cliente. Devolvendo OK...")
-        return jsonify({"status": "OK"}), 200
-
-
-    # Se o timestamp do meu cliente é menor do que o pedido, peça a ele para esperar
-    print(f"[Rota request] | [{node_name}] | ✅ {their_node} está pedindo OK (ts_dele={their_ts:.4f}) - (ts_meu={my_client_timestamp:.4f}), array:", flush=True)
-    print(f'ANTES --> {deferred_replies}')
-    if my_client_timestamp < their_ts:
-        print(f"[Rota request] | [{node_name}] | 🔁 [{node_name}] o timestamp do meu cliente é menor", flush=True)
-        pending_node = {"timestamp": their_ts, "node": their_node}
-        print(f"[Rota request] | [{node_name}] | NÓ PENDENTE: {pending_node}")
-        add_and_sort(pending_node)
-        print(f'[Rota request] | [{node_name}] | DEPOIS --> {deferred_replies}')
-        event_log.append(f"Pedido de {their_node} recebido, com timestamp {their_ts:.4f}. O servidor {node_name} possui timestamp menor: {my_client_timestamp:.4f}. Devolvendo WAIT")
-        
-        return jsonify({"status": "WAIT"}), 202
-    
-    else:
-        # Caso contrário, responde com "OK", permitindo o acesso à RC
-        print(f"✅ [Rota request] | [{node_name}] deu OK para {their_node} (ts={their_ts:.4f})", flush=True)
-        print(f'[Rota request] | [{node_name}] | DEPOIS --> {deferred_replies}')
-        
-        event_log.append(f"Pedido de {their_node} recebido, com timestamp {their_ts:.4f}. O servidor {node_name} possui timestamp maior: {my_client_timestamp:.4f}. Devolvendo OK")
-        
-        return jsonify({"status": "OK"}), 200
-    
-
-# Rota chamada para o recebimento de oks de outros nós
-@app.route("/release", methods=["POST"])
-def release():
-    global ok_counter, peer_list, ready_to_continue
-    
-    # Se a rota foi chamada, aumenta o contador de ok
-    ok_counter += 1
-    print(f'\n[Rota release] | [{node_name}] | RECEBI O RELEASE, OK COUNT --> {ok_counter} E QTT NECESSÁRIA --> {len(peer_list)}\n')
-    event_log.append(f"Release recebido. OK COUNT = {ok_counter}, quantidade de OKs necessarios: {len(peer_list)}")
-    
-    ready_to_continue = True
+   
+# Rota que devolve a requisição de estabelecimento da conexão com os clientes
+@app.route("/isalive", methods=["GET"])
+def isalive():
     return "", 200
-    
 
 # Rota chamada por um cliente para iniciar uma tentativa de acesso à região crítica
 @app.route("/elect", methods=["POST"])
@@ -165,12 +118,57 @@ def elect():
 
     print(f"[Rota elect] | [{node_name}] | 🟢 Mandando a mensagem de commit para o cliente", flush=True)
     return jsonify({"status": "COMMITTED"}), 200
-   
-# Rota que devolve a requisição de estabelecimento da conexão com os clientes
-@app.route("/isalive", methods=["GET"])
-def isalive():
-    return "", 200
 
+# Rota chamada por outros nós do cluster pedindo permissão para acessar a região crítica
+@app.route("/request", methods=["POST"])
+def on_request():
+    global node_name, has_client_request, my_client_timestamp, deferred_replies
+    
+    # Extrai o JSON enviado pelo outro nó
+    message = request.json                         
+    their_ts = message["timestamp"]
+    their_node = message["node"]
+    
+    if has_client_request == False: # Caso em que o nó não possui nenhum pedido de cliente
+        event_log.append(f"Pedido de {their_node} recebido. O servidor {node_name} não possui cliente. Devolvendo OK...")
+        return jsonify({"status": "OK"}), 200
+
+
+    # Se o timestamp do meu cliente é menor do que o pedido, peça a ele para esperar
+    print(f"[Rota request] | [{node_name}] | ✅ {their_node} está pedindo OK (ts_dele={their_ts:.4f}) - (ts_meu={my_client_timestamp:.4f}), array:", flush=True)
+    print(f'ANTES --> {deferred_replies}')
+    if my_client_timestamp < their_ts:
+        print(f"[Rota request] | [{node_name}] | 🔁 [{node_name}] o timestamp do meu cliente é menor", flush=True)
+        pending_node = {"timestamp": their_ts, "node": their_node}
+        print(f"[Rota request] | [{node_name}] | NÓ PENDENTE: {pending_node}")
+        add_and_sort(pending_node)
+        print(f'[Rota request] | [{node_name}] | DEPOIS --> {deferred_replies}')
+        event_log.append(f"Pedido de {their_node} recebido, com timestamp {their_ts:.4f}. O servidor {node_name} possui timestamp menor: {my_client_timestamp:.4f}. Devolvendo WAIT")
+        
+        return jsonify({"status": "WAIT"}), 202
+    
+    else:
+        # Caso contrário, responde com "OK", permitindo o acesso à RC
+        print(f"✅ [Rota request] | [{node_name}] deu OK para {their_node} (ts={their_ts:.4f})", flush=True)
+        print(f'[Rota request] | [{node_name}] | DEPOIS --> {deferred_replies}')
+        
+        event_log.append(f"Pedido de {their_node} recebido, com timestamp {their_ts:.4f}. O servidor {node_name} possui timestamp maior: {my_client_timestamp:.4f}. Devolvendo OK")
+        
+        return jsonify({"status": "OK"}), 200
+    
+
+# Rota chamada para o recebimento de oks de outros nós
+@app.route("/release", methods=["POST"])
+def release():
+    global ok_counter, peer_list, ready_to_continue
+    
+    # Se a rota foi chamada, aumenta o contador de ok
+    ok_counter += 1
+    print(f'\n[Rota release] | [{node_name}] | RECEBI O RELEASE, OK COUNT --> {ok_counter} E QTT NECESSÁRIA --> {len(peer_list)}\n')
+    event_log.append(f"Release recebido. OK COUNT = {ok_counter}, quantidade de OKs necessarios: {len(peer_list)}")
+    
+    ready_to_continue = True
+    return "", 200
 
 # =================== ROTAS PARA A PAGINA WEB ===================
 

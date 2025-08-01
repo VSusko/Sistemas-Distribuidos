@@ -49,7 +49,7 @@ while commit_counter < TOTAL_COMMITS:
         time.sleep(0.5)
         server_response = requests.post(f"http://{target_server}:8080/elect", json={"timestamp": timestamp, "client_name": pod_name})
         time.sleep(0.5)
-
+        
         # Imprime a resposta do servidor
         print(f"🟢 [{pod_name}] resposta do servidor: {server_response.text}", flush=True)
 
