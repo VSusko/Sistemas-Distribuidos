@@ -19,23 +19,21 @@ metadata:
 spec:
   containers:
   - name: critical
-    image: victorsusko/critical_server:web
+    image: southamerica-east1-docker.pkg.dev/tp2-sd-467114/repositorio-tp2/critical_server:web
     env:
     - name: POD_NAME
       value: critical.server
     ports:
     - containerPort: 8080
 ---
-# Novo serviço NodePort para acesso externo
 apiVersion: v1
 kind: Service
 metadata:
-  name: critical-nodeport
+  name: critical-lb
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     app: critical
   ports:
-    - port: 8080
-      targetPort: 8080
-      nodePort: 30086
+    - port: 80       # Porta externa que será acessada via navegador
+      targetPort: 8080  # Porta onde sua aplicação escuta no container
