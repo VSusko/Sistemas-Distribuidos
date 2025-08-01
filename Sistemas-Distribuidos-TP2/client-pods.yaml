@@ -1,14 +1,13 @@
-# client-pods.yaml
 apiVersion: v1
 kind: Pod
 metadata:
   name: client-0
   labels:
-    app: interactive-client  
+    app: client-interactive
 spec:
   containers:
   - name: client
-    image: southamerica-east1-docker.pkg.dev/tp2-sd-467114/repositorio-tp2/interactive_client:web  
+    image: victorsusko/client-interactive:web
     env:
     - name: POD_NAME
       value: client-0
@@ -24,7 +23,7 @@ metadata:
 spec:
   containers:
   - name: client
-    image: southamerica-east1-docker.pkg.dev/tp2-sd-467114/repositorio-tp2/client:web  
+    image: victorsusko/client:web
     env:
     - name: POD_NAME
       value: client-1
@@ -38,7 +37,7 @@ metadata:
 spec:
   containers:
   - name: client
-    image: southamerica-east1-docker.pkg.dev/tp2-sd-467114/repositorio-tp2/client:web
+    image: victorsusko/client:web
     env:
     - name: POD_NAME
       value: client-2
@@ -52,7 +51,7 @@ metadata:
 spec:
   containers:
   - name: client
-    image: southamerica-east1-docker.pkg.dev/tp2-sd-467114/repositorio-tp2/client:web
+    image: victorsusko/client:web
     env:
     - name: POD_NAME
       value: client-3
@@ -66,20 +65,21 @@ metadata:
 spec:
   containers:
   - name: client
-    image: southamerica-east1-docker.pkg.dev/tp2-sd-467114/repositorio-tp2/client:web
+    image: victorsusko/client:web
     env:
     - name: POD_NAME
       value: client-4
----
+--- # Para o cliente interativo
 apiVersion: v1
 kind: Service
 metadata:
-  name: interactive-client
+  name: client-0-service
 spec:
   selector:
-    app: interactive-client
+    app: client-interactive
   ports:
-  - protocol: TCP
-    port: 80
-    targetPort: 8080
-  type: LoadBalancer 
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+      nodePort: 30080  
+  type: NodePort
