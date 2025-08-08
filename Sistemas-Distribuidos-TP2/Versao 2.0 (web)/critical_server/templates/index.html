@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Região Crítica - Servidor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Região Crítica - Pedidos Recebidos</h1>
+        <button onclick="refreshData()">Atualizar</button>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nome do Cliente</th>
+                    <th>Timestamp</th>
+                    <th>Data e Hora</th>
+                    <th>Mensagem</th>
+                </tr>
+            </thead>
+            <tbody id="requests-table">
+                {% for req in requests %}
+                <tr>
+                    <td>{{ req.client_name }}</td>
+                    <td>{{ req.timestamp }}</td>
+                    <td>{{ req.timestamp | timestamp_to_datetime }}</td>
+                    <td {% if req.client_name == 'server-0' %}class="success-message"{% endif %}>Acesso à região crítica concedido</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        async function refreshData() {
+            try {
+                const response = await fetch('/data', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const requests = await response.json();
+                const tableBody = document.getElementById('requests-table');
+                tableBody.innerHTML = '';
+
+                requests.forEach(req => {
+                    const row = document.createElement('tr');
+
+                    // Função para criar uma <td> com opcional classe e conteúdo
+                    function createCell(content, isSuccess) {
+                        const td = document.createElement('td');
+                        if (isSuccess) td.classList.add('success-message');
+                        td.textContent = content;
+                        return td;
+                    }
+
+                    const isSuccess = req.client_name === 'server-0';
+
+                    row.appendChild(createCell(req.client_name, isSuccess));
+                    row.appendChild(createCell(req.timestamp, isSuccess));
+                    row.appendChild(createCell(new Date(req.timestamp * 1000).toLocaleString('pt-BR'), isSuccess));
+                    row.appendChild(createCell('Acesso à região crítica concedido', isSuccess));
+
+                    tableBody.appendChild(row);
+                });
+            } catch (err) {
+                console.error('Erro ao atualizar dados:', err);
+                alert('Erro ao atualizar dados: ' + err.message);
+            }
+        }
+        // Atualização automática a cada 5 segundos
+        setInterval(refreshData, 5000);
+    </script>
+</body>
+</html>
