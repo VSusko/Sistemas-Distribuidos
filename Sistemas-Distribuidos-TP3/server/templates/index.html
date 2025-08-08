@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Servidor {{ node_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h2>Logs do Servidor: <span id="node-name">{{ node_name }}</span></h2>
+    <div id="log"></div>
+
+    <script>
+        async function atualizarLogs() {
+            const resp = await fetch('/api/logs');
+            const logs = await resp.json();
+            const div = document.getElementById('log');
+            div.innerHTML = logs.map(l => `<div>${l}</div>`).join('');
+            div.scrollTop = div.scrollHeight;
+        }
+
+        setInterval(atualizarLogs, 1500);
+        atualizarLogs();
+    </script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Cliente Interativo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Enviar Pedido</h1>
+        <div class="form-container">
+            <input type="text" id="client_name" name="client_name" placeholder="Nome do Cliente" required>
+            <button type="submit" id="enviar" onclick="enviarFormulario()">Enviar</button>
+        </div>
+        <h2>Resultados</h2>
+        <div id="resultados"></div>
+    </div>
+
+    <script>
+        async function enviarFormulario() {
+            const clientName = document.getElementById('client_name').value;
+            const resultadosDiv = document.getElementById('resultados');
+            const button = document.getElementById('enviar');
+
+            if (!clientName) {
+                alert('Por favor, insira um nome.');
+                return;
+            }
+
+            // Desabilitar o botão durante o envio
+            button.disabled = true;
+            button.textContent = 'Enviando...';
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({ client_name: clientName })
+                });
+
+                const result = await response.json();
+                const resultBox = document.createElement('div');
+                resultBox.className = result.status === 'success' ? 'result-box success' : 'result-box error';
+
+                if (result.status === 'success') {
+                    resultBox.innerHTML = `
+                        <div class="result-item"><span class="result-label">Nome:</span> ${result.client_name}</div>
+                        <div class="result-item"><span class="result-label">Timestamp:</span> ${result.timestamp}</div>
+                        <div class="result-item"><span class="result-label">Data e Hora:</span> ${new Date(result.timestamp * 1000).toLocaleString('pt-BR')}</div>
+                        <div class="result-item"><span class="result-label">Mensagem:</span> ${result.commit_message}</div>
+                    `;
+                    resultadosDiv.prepend(resultBox); // Adiciona no topo
+                    document.getElementById('client_name').value = ''; // Limpa o campo
+                } else {
+                    resultBox.innerHTML = `
+                        <div class="result-item"><span class="result-label">Erro:</span> ${result.message}</div>
+                    `;
+                    resultadosDiv.prepend(resultBox);
+                    alert('Erro: ' + result.message);
+                }
+            } catch (err) {
+                const resultBox = document.createElement('div');
+                resultBox.className = 'result-box error';
+                resultBox.innerHTML = `
+                    <div class="result-item"><span class="result-label">Erro na comunicação:</span> ${err.message}</div>
+                `;
+                resultadosDiv.prepend(resultBox);
+                alert('Erro na comunicação: ' + err.message);
+            } finally {
+                // Reabilitar o botão após a resposta
+                button.disabled = false;
+                button.textContent = 'Enviar';
+            }
+        }
+
+        // Capturar tecla Enter no input
+        document.getElementById('client_name').addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault(); // Evitar comportamento padrão
+                enviarFormulario();
+            }
+        });
+    </script>
+</body>
+</html>

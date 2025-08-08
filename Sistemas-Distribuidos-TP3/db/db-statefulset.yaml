@@ -1,0 +1,104 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+spec:
+  clusterIP: None
+  selector:
+    app: db
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: db
+spec:
+  serviceName: "db"
+  replicas: 5
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      containers:
+      - name: db
+        image: cristianomafuz/db:web
+        ports:
+        - containerPort: 8080
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: PEERS
+          value: "db-0.db,db-1.db,db-2.db,db-3.db,db-4.db"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-0-nodeport
+spec:
+  selector:
+    statefulset.kubernetes.io/pod-name: db-0
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30091
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-1-nodeport
+spec:
+  selector:
+    statefulset.kubernetes.io/pod-name: db-1
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30092
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-2-nodeport
+spec:
+  selector:
+    statefulset.kubernetes.io/pod-name: db-2
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30093
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-3-nodeport
+spec:
+  selector:
+    statefulset.kubernetes.io/pod-name: db-3
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30094
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-4-nodeport
+spec:
+  selector:
+    statefulset.kubernetes.io/pod-name: db-4
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30095
