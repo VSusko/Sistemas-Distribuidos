@@ -1,1 +1,1 @@
-# Repositório para os trbalhos da disciplina de Sistemas Distribuídos
+# Repositório para os trabalhos da disciplina de Sistemas Distribuídos
