@@ -3,7 +3,7 @@ IMAGE_SERVER = victorsusko/server:latest
 IMAGE_CRITICAL = victorsusko/critical_server:latest
 
 # .PHONY garante que o make execute o comando mesmo que um arquivo com esse nome exista
-.PHONY: all build-client push-client restart-client build-server push-server restart-server apply server client 
+.PHONY: all build-client push-client restart-client build-server push-server restart-server apply server client app
 
 # --- Regras do Cliente ---
 build-client:
@@ -68,6 +68,8 @@ build: build-client push-client build-server push-server build-critical push-cri
 
 # Para fazer o build,push e criar todos os pods
 b-app: build server critical client
+
+app: server critical client
 
 # Para deletar todos os pods e posteriormente fazer build,push e criação
 restart: restart-cluster b-app

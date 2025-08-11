@@ -100,13 +100,15 @@ def elect():
 
     # Se recebeu OK de todos os peers (exceto ele mesmo), entra na RC
     print(f'\n[Rota elect] | [{node_name}] | OK COUNTER --> {ok_counter}')
-    critical_region(my_client_timestamp,node_name)
-    print(f"[Rota elect] | [{node_name}] | 🔴 saiu da RC", flush=True)
 
+    if (ok_counter == 5):
+        critical_region(my_client_timestamp,node_name)
+    
+    print(f"[Rota elect] | [{node_name}] | 🔴 saiu da RC", flush=True)
 
     ready_to_continue = False  # Reset da flag de parada
     has_client_request = False # Reset da flag de cliente
-    ok_counter = 0             # Reset do contador de oks
+    ok_counter = 1             # Reset do contador de oks
 
     # Para cada nó do cluster que ficou em espera, envia um OK 
     for nodes in deferred_replies:
