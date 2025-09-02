@@ -62,7 +62,6 @@ def write_request():
     new_client_string  = clients_database[client_number] # String que será manipulada pelas operações. Começa como sendo a última modificação no banco de dados
     
     print(f"[Rota write_request] | [{node_name}] | 🟡 Recebeu pedido do cliente [{client_name}] | Atual estado do banco: '{clients_database[client_number]}'. Chamando primário...", flush=True)
-    print(f"[Rota write_request] | [{node_name}] | Debug instruction = {instruction}", flush=True)
     
     # Se o comando for create:
     if whole_message.startswith("create"):
@@ -82,12 +81,8 @@ def write_request():
     elif whole_message.startswith("delete"):
         print(f"[Rota write_request] | [{node_name}] | Operação = delete")
         
-        # Se não encontrar na string antiga do cliente a substring que ele deseja remover, não remove nada
-        if clients_database[client_number].find(instruction) != -1:
-            new_client_string = clients_database[client_number].replace(f"{instruction}", "")
-        # Caso contrario, retira todas as substrings 
-        else:
-            new_client_string = clients_database[client_number] - clients_database[client_number][-1]
+        # Retira da string antiga a substring enviada pelo cliente
+        new_client_string = clients_database[client_number].replace(f"{instruction}", "")
         operation = 2 # Operação 0 = delete
             
     # Flag de controle do loop do protocolo de comunicação
