@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Cliente Interativo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        async function sendMessage(event) {
+            event.preventDefault();
+
+            const messageInput = document.getElementById("message");
+            const logArea = document.getElementById("log");
+            const message = messageInput.value.trim();
+
+            if (!message) {
+                alert("Digite uma mensagem antes de enviar!");
+                return;
+            }
+
+            logArea.value += `[Cliente] Enviando: ${message}\n`;
+
+            try {
+                const response = await fetch("/", {
+                    method: "POST",
+                    body: new URLSearchParams({message: message}),
+                });
+
+                const data = await response.json();
+
+                if (data.status === "success") {
+                    logArea.value += `[Servidor] ✅ Mensagem COMMITED: "${data.message}"\n`;
+                } else {
+                    logArea.value += `[Servidor] ❌ Erro: ${data.message}\n`;
+                }
+
+            } catch (err) {
+                logArea.value += `[Erro] Falha na comunicação: ${err}\n`;
+            }
+
+            logArea.scrollTop = logArea.scrollHeight;
+            messageInput.value = "";
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Cliente Interativo</h1>
+
+        <p><strong>Nó atual:</strong> {{ node_name }}</p>
+
+        <h2>Primary Nodes:</h2>
+        <ul>
+            <li>
+                <strong>Create:</strong> {{ primary_node_create }}  
+                — É primário? {{ "✅ Sim" if is_primary_create else "❌ Não" }}
+            </li>
+            <li>
+                <strong>Update:</strong> {{ primary_node_update }}  
+                — É primário? {{ "✅ Sim" if is_primary_update else "❌ Não" }}
+            </li>
+            <li>
+                <strong>Delete:</strong> {{ primary_node_delete }}  
+                — É primário? {{ "✅ Sim" if is_primary_delete else "❌ Não" }}
+            </li>
+        </ul>
+
+        <form id="client-form" onsubmit="sendMessage(event)">
+            <input type="text" id="message" placeholder="Digite sua mensagem aqui..." autocomplete="off">
+            <button type="submit">Enviar</button>
+        </form>
+
+        <textarea id="log" readonly placeholder="Logs aparecerão aqui..."></textarea>
+    </div>
+</body>
+
+
+</html>

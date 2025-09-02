@@ -1,0 +1,38 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f4f9;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+}
+
+.node {
+    margin: 20px auto;
+    text-align: center;
+    font-weight: bold;
+}
+
+table {
+    border-collapse: collapse;
+    margin: auto;
+    width: 50%;
+    background: white;
+    box-shadow: 0 0 8px rgba(0,0,0,0.1);
+}
+
+th, td {
+    border: 1px solid #ccc;
+    padding: 12px;
+    text-align: center;
+}
+
+th {
+    background: #0078d4;
+    color: white;
+}
+
+tr:nth-child(even) {
+    background: #f9f9f9;
+}

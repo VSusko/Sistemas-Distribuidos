@@ -1,0 +1,172 @@
+IMAGE_CLIENT = cristianomafuz/client:tp3
+IMAGE_INTERACTIVE_CLIENT = cristianomafuz/client-interactive:tp3
+IMAGE_SERVER = cristianomafuz/server:tp3
+IMAGE_CLUSTER_STORE = cristianomafuz/cluster_store:tp3
+
+# =================== Comandos para construcao do sistema =================== 
+
+# .PHONY garante que o make execute o comando mesmo que um arquivo com esse nome exista
+.PHONY: all build-client push-client restart-client build-server push-server restart-server apply server client db
+
+# --- Regras do Cliente ---
+build-client:
+	docker build -t $(IMAGE_CLIENT) ./client
+
+push-client:
+	docker push $(IMAGE_CLIENT)
+
+build-push-client: build-client push-client
+
+# --- Regras do Cliente interativo ---
+build-i_client:
+	docker build -t $(IMAGE_INTERACTIVE_CLIENT) ./interactive_client
+
+push-i_client:
+	docker push $(IMAGE_INTERACTIVE_CLIENT)
+
+build-push-i-client: build-i_client push-i_client
+
+# --- Regras do Servidor ---
+build-server:
+	docker build -t $(IMAGE_SERVER) ./cluster_sync
+
+push-server:
+	docker push $(IMAGE_SERVER)
+
+build-push-server: build-server push-server
+
+# --- Regras do db backup---
+build-db:
+	docker build -t $(IMAGE_CLUSTER_STORE) ./cluster_store
+
+push-db:
+	docker push $(IMAGE_CLUSTER_STORE)
+
+build-push-db: build-db push-db
+
+# ------ Regras de conveniência ------
+delete:
+	kubectl delete all --all
+
+# Para criar apenas os pods do cluster sync
+apply-server: 
+	kubectl apply -f kubernetes/server-statefulset.yaml
+	
+# Para criar apenas os pods de cliente
+apply-client: 
+	kubectl apply -f kubernetes/client-pods.yaml
+
+# Para criar apenas os pods do cluster store
+apply-db: 
+	kubectl apply -f kubernetes/db.yaml
+
+# Para resetar os pods (utiliza o kubernetes local)
+restart-cluster:	
+	kind delete cluster
+	kind create cluster --config kubernetes/kind-config.yaml
+
+# Para fazer o build e push de todos os componentes
+build-push: build-push-client build-push-server build-push-db build-push-i-client
+
+# Para criar os pods
+apply: apply-server apply-client apply-db
+
+# Para fazer todos os builds, pushes e criar todos os pods
+b-apply: build-push apply
+
+# Para deletar todos os pods e posteriormente fazer build,push e criação
+restart: restart-cluster b-apply
+
+# Para fazer build,push e resetar pods (as vezes nao funciona, melhor usar "make delete" seguido de "make b-apply")
+all: build-client push-client restart-client build-server push-server restart-server
+
+# =================== Comandos do kubectl =================== 
+
+# Mostrar todos os pods
+getp:
+	kubectl get pods
+
+# Mostrar logs dos clientes
+getc0:
+	kubectl logs client-0
+getc1:
+	kubectl logs client-1
+getc2:
+	kubectl logs client-2
+getc3:
+	kubectl logs client-3
+getc4:
+	kubectl logs client-4
+
+# Mostrar logs dos servidores do sync
+gets0:
+	kubectl logs server-0
+gets1:
+	kubectl logs server-1
+gets2:
+	kubectl logs server-2
+gets3:
+	kubectl logs server-3
+gets4:
+	kubectl logs server-4
+
+# Mostrar logs dos servidores do store
+getd0:
+	kubectl logs db-0 -f
+getd1:
+	kubectl logs db-1
+getd2:
+	kubectl logs db-2
+
+# =================== Comandos de teste =================== 
+
+# Comandos para desativar os pods do cluster store
+deactivate-db-0:
+	kubectl patch pod db-0 -p '{"spec":{"containers":[{"name":"db","image":"k8s.gcr.io/pause"}]}}'
+deactivate-db-1:
+	kubectl patch pod db-1 -p '{"spec":{"containers":[{"name":"db","image":"k8s.gcr.io/pause"}]}}'
+deactivate-db-2:
+	kubectl patch pod db-2 -p '{"spec":{"containers":[{"name":"db","image":"k8s.gcr.io/pause"}]}}'
+
+# Teste 1: "deletar" um nó primario quando os 3 estão vivos. OBS: o kubernetes nao deixa deletar um nó que nao seja o ultimo. Por isso,
+#  apenas faz com que o pod fique inativo
+testdb1: deactivate-db-2
+
+# Teste 2: deletar o nó primário de novo apos o teste1
+testdb2: deactivate-db-2 deactivate-db-1
+
+# Teste 3: "deletar" um nó secundario quando os 3 estão vivos
+testdb3: deactivate-db-0
+
+# Teste 4: deletar um nó secundario apos o teste 3
+testdb4: deactivate-db-0 deactivate-db-1
+
+# Teste 5: deletar o no 0 depois o 2
+testdb5: deactivate-db-0 deactivate-db-2
+
+# Teste 6: deletar o nó 1 e depois o 2
+testdb6: deactivate-db-1 deactivate-db-2
+
+# Comandos para desativar os pods do cluster sync
+deactivate-sv-0:
+	kubectl patch pod server-0 -p '{"spec":{"containers":[{"name":"server","image":"k8s.gcr.io/pause"}]}}'
+deactivate-sv-1:
+	kubectl patch pod server-1 -p '{"spec":{"containers":[{"name":"server","image":"k8s.gcr.io/pause"}]}}'
+deactivate-sv-2:
+	kubectl patch pod server-2 -p '{"spec":{"containers":[{"name":"server","image":"k8s.gcr.io/pause"}]}}'
+deactivate-sv-3:
+	kubectl patch pod server-3 -p '{"spec":{"containers":[{"name":"server","image":"k8s.gcr.io/pause"}]}}'
+deactivate-sv-4:
+	kubectl patch pod server-4 -p '{"spec":{"containers":[{"name":"server","image":"k8s.gcr.io/pause"}]}}'
+
+# Teste 1: deletar apenas um nó
+testsv1: deactivate-sv-0
+
+# Teste 2: deletar 2 nós
+testsv2: deactivate-sv-0 deactivate-sv-1
+
+# Teste 3: deletar 3 nós
+testsv3: deactivate-sv-0 deactivate-sv-1 deactivate-sv-2
+
+# Teste 4: deletar 4 nós
+testsv4: deactivate-sv-0 deactivate-sv-1 deactivate-sv-2 deactivate-sv-3

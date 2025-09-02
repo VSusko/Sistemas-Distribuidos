@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Banco Distribuído</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        // Recarrega a página a cada 3 segundos (3000 ms)
+        setInterval(() => {
+            window.location.reload();
+        }, 1000);
+    </script>
+</head>
+<body>
+    <h1>Banco de Dados Distribuído</h1>
+
+    <div class="node">
+        📌 Este nó: <b>{{ node_name }}</b> |
+        Primário: <b>{{ primary_node }}</b> |
+        Status:
+        {% if is_primary %}
+            👑 Primário
+        {% else %}
+            🔄 Réplica
+        {% endif %}
+    </div>
+
+    <table>
+        <tr>
+            <th>Cliente</th>
+            <th>Valor</th>
+        </tr>
+        {% for value in clients_database %}
+        <tr>
+            <td>client-{{ loop.index0 }}</td>
+            <td>{{ value if value else "-" }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
