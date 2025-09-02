@@ -24,14 +24,15 @@ h1 {
     color: #333;
 }
 
+/* Form e input */
 form {
     display: flex;
-    gap: 10px;
+    flex-direction: column; /* Input acima dos botões */
+    gap: 10px;              /* Espaço entre input e container de botões */
     margin-bottom: 15px;
 }
 
 input[type="text"] {
-    flex: 1;
     padding: 10px;
     font-size: 16px;
     border: 2px solid #ddd;
@@ -44,7 +45,15 @@ input[type="text"]:focus {
     outline: none;
 }
 
+/* Container dos botões */
+#buttons {
+    display: flex;
+    gap: 10px; /* Espaço entre os botões */
+    justify-content: space-between;
+}
+
 button {
+    flex: 1;               /* Todos os botões do mesmo tamanho */
     padding: 10px 15px;
     background: #6c63ff;
     color: #fff;

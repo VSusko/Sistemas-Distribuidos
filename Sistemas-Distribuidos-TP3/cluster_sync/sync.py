@@ -1,13 +1,13 @@
 from flask import Flask, request, jsonify, render_template  # Framework web e utilitários para requisições/respostas
-import time                                # Para marcar timestamps e simular uso da região crítica
-import os                                  # Para acessar variáveis de ambiente (ex: nome do nó)
-import requests                            # Para enviar requisições HTTP para outros nós
-import random
+import time       # Para marcar timestamps e simular uso da região crítica
+import os         # Para acessar variáveis de ambiente (ex: nome do nó)
+import requests   # Para enviar requisições HTTP para outros nós
+import random     # Para fazer o acesso randomico nos servidores da RC
+
+# ==================== Variaveis do próprio nó ====================
 
 # Inicializa a aplicação Flask
 app = Flask(__name__)  
-
-# ==================== Variaveis do próprio nó ====================
 
 # Nome do nó atual (definido via variável de ambiente, ex: NODE_NAME=server-1)
 node_name = os.getenv("NODE_NAME", "undefined")
@@ -27,13 +27,17 @@ ready_to_continue   = False   # Flag para controle de parada do servidor
 
 
 # ==================== Variaveis do para comunicacao com cluster store ====================
+
+# Variável que dita quantos nós existem no cluster store
 cs_max_nodes = 3
 
 # ==================== Variaveis da web ====================
-event_log = []  # Armazena os eventos para mostrar na interface web
 
+# Armazena os eventos para mostrar na interface web
+event_log = []  
 
 # ===================Espera pela inicialização dos servidores do cluster store===================
+
 for i in range(cs_max_nodes):
     cs_final_server = f"db-{i}.db"
     print(f"\n[Conexão inicial] | [{node_name}]: Tentando conexão com servidor [{cs_final_server}]",flush=True)
@@ -60,72 +64,76 @@ def add_and_sort(new_request):
     # Ordena a lista com base no timestamp
     deferred_replies.sort(key=lambda x: (x["timestamp"], x["node"]))  # desempata pelo nome do nó
 
-# Função que realiza a requisição da região crítica
+# Função que realiza a requisição à região crítica
 def critical_region_request(name, message):
     global cs_max_nodes
     
-    attempts          = 0       # Variável que controla quantas tentativas de requisicao ao banco de dados serao feitas. 
+    attempts          = 0       # Variável que controla quantas tentativas de requisição ao banco de dados serão feitas. 
     cs_nodes_selected = []      # Lista que armazena quais nós foram tentados
     cs_node_selection = random.randint(0, (cs_max_nodes-1)) # Sorteia uma servidor aleatório para requisitar
 
+    # Enquanto não forem feito 5 tentativas...
     while attempts < 5:
         try:
-            # Sorteia outro nó do cluster store para enviar o pedido, caso tenha falhado no pedido anterior 
+            # Sorteia outro nó do cluster store aleatoriamente para enviar o pedido, caso tenha falhado no pedido anterior 
             while cs_node_selection in cs_nodes_selected:
                 cs_node_selection = random.randint(0, (cs_max_nodes-1))
-                
+            
             print(f"[critical_region] | [{node_name}] | Conversando com o servidor [db-{cs_node_selection}.db]", flush=True)
             event_log.append(f"[critical_region] | Conversando com o servidor [db-{cs_node_selection}.db]")
+            # Tenta enviar pedido ao cluster store
             db_response = requests.post(f"http://db-{cs_node_selection}.db:8080/write_request", json={"node": name, "value": message}, timeout=1)
             
-            # Se deu certo, sai do loop
+            # Se deu certo, sai do loop 
             if db_response.status_code == 200: 
                 print(f"[critical_region] | [{node_name}] | ✅ Utilizou a região crítica!\n", flush=True)
                 event_log.append(f"[critical_region] | ✅ Utilizei a região crítica!")
                 return True
+            # Se não deu certo, mas obteve uma resposta mostra erro
             else:
                 print(f"[critical_region] | [{node_name}] | ❌ Erro ao usar a regiao critica", flush=True)
                 
-
-        # Caso não seja possível comunicar com o pod, tenta conexão com o outro nó do cluster store.
+        # Caso não seja possível comunicar com o servidor, tenta conexão com o outro nó do cluster store.
         except requests.exceptions.RequestException:
             print(f"[critical_region: Exception] | [{node_name}] | ❌ Erro: Não foi possível conectar ao servidor [db-{cs_node_selection}.db]", flush=True)
             event_log.append(f"[critical_region: Exception] | ❌ Erro: Não foi possível conectar ao servidor [db-{cs_node_selection}.db]")
 
-            # Adicionando o nó na lista de selecionados
+            # Adicionando o servidor na lista de selecionados
             cs_nodes_selected.append(cs_node_selection)
             
+            # Se todos os nós já foram tentados, espera alguns segundos antes de tentar outra conexão e reseta a lista de servidores
             if len(cs_nodes_selected) >= cs_max_nodes:
                 print(f"[critical_region: Exception] | [{node_name}] | ⏳ Nenhum servidor respondeu, aguardando...", flush=True)
-                time.sleep(3)
+                time.sleep(2)
                 cs_nodes_selected.clear()
-                
-            attempts += 1
             
+            attempts += 1 # Incremento do contador    
+    
+    # Retorna falso, caso não consiga contactar algum servidor
     return False
 
+# Função que realiza o protocolo de um peer morto
 def dead_peer_protocol(dead_peer):
     global peer_list, node_name
     
-    # Remove o peer morto
+    # Remove o peer morto da lista de peers
     peer_list.remove(dead_peer)
     print(f"[dead_peer_protocol] | [{node_name}] | Removendo peer morto: {dead_peer}")
     
-    # Coleta todos os peers que falharam na notificação
-    failed_peers = []
-    peers_to_notify = [p for p in peer_list if not p.startswith(node_name)]
+    failed_peers = [] # Lista para coletar todos os peers que falharam na notificação
+    peers_to_notify = [p for p in peer_list if not p.startswith(node_name)] # Lista que tem todos os peers menos o próprio nó
     
     for peer in peers_to_notify:
+        # Tenta contactar o peer da morte do outro
         try:
             requests.post(f"http://{peer}:8080/update_peers", json={"dead_peer": dead_peer}, timeout=2)
-            # print(f"[{node_name}] Notificou {peer} sobre morte de {dead_peer}")
-            
+        # Caso nào seja possível, adiciona o peer na lista de peers que falharam
         except requests.exceptions.RequestException as e:
             print(f"[dead_peer_protocol: Exception] | [{node_name}] | ❌ Falha na conexão com {peer}: {e}", flush=True)
             event_log.append(f"[dead_peer_protocol: Exception] | ❌ Erro: Falha na conexão com {peer}")
             failed_peers.append(peer)
     
-    # Remove todos os peers que falharam
+    # Remove todos os peers que também falharam 
     for failed_peer in failed_peers:
         if failed_peer in peer_list:
             peer_list.remove(failed_peer)
@@ -134,11 +142,6 @@ def dead_peer_protocol(dead_peer):
 
 # =================== ROTAS PARA O PROTOCOLO DE COMUNICACAO ===================
    
-# Rota que devolve a requisição de estabelecimento da conexão com os clientes
-@app.route("/isalive", methods=["GET"])
-def isalive():
-    return "", 200
-
 # Rota chamada por um cliente para iniciar uma tentativa de acesso à região crítica
 @app.route("/elect", methods=["POST"])
 def elect():
@@ -149,27 +152,28 @@ def elect():
     my_client_timestamp = data.get("timestamp")    # Obtendo timestamp do cliente
     client_name         = data.get("client_name")  # Obtendo nome do cliente
     client_message      = data.get("value")        # Obtendo mensagem do cliente
-    print(f"[Rota elect] | [{node_name}] | 📡 Recebeu pedido do cliente [{client_name}, com timestamp {my_client_timestamp:.4f}", flush=True)
+    print(f"[Rota elect] | [{node_name}] | 📡 Recebeu pedido do cliente [{client_name}], com timestamp {my_client_timestamp:.4f}", flush=True)
     event_log.append(f"[{time.strftime('%H:%M:%S')}] 📡 Pedido de \"{client_name}\" recebido com timestamp {my_client_timestamp}")
     
-
     # Para cada nó do cluster sync, enviar um pedido com o timestamp do cliente:
-    i=0
+    i = 0
     while i < len(peer_list):
+        # Peer a ser contactado 
         peer = peer_list[i]
         # Não envia solicitação para si mesmo
         if peer.startswith(node_name):
             i += 1
             continue
         
+        # Desativa a flag do loop de espera
         ready_to_continue = False
         print(f'\n[Rota elect] | [{node_name}] | ⚪️ OK COUNTER (antes de pedir OKs) --> {ok_counter}')
         
-        # Envia pedido de acesso à RC
+        # Tenta enviar pedido de acesso à RC ao peer
         try:
             print(f'[Rota elect] | [{node_name}] | PEDINDO OK PARA O SERVIDOR: {peer}')
             event_log.append(f"[Rota elect] | PEDINDO OK PARA O SERVIDOR: {peer}")
-
+            
             peers_response = requests.post(f"http://{peer}:8080/request", json={"timestamp": my_client_timestamp,"node": node_name}, timeout=1)
             time.sleep(0.1)
 
@@ -180,7 +184,6 @@ def elect():
                 print(f'[Rota elect] | [{node_name}] | 🆗 recebeu OK de {peer} --> {ok_counter}')
                 event_log.append(f"[Rota elect] | 🆗 recebi OK de {peer} --> {ok_counter}")
                 
-                
             # Se recebeu "WAIT"
             if peers_response.status_code == 202:  
                 print(f'[Rota elect] | [{node_name}] | 🛑 Recebeu WAIT de {peer}')
@@ -188,36 +191,38 @@ def elect():
                 event_log.append(f"[Rota elect] | 🛑 Recebi WAIT de {peer}. 🕑 Esperando permissão para continuar...")
                 while not ready_to_continue:
                     time.sleep(0.1)  # Espera 100ms antes de checar novamente
+                    # Verifica se o peer está vivo
                     try:
-                        # Verifica se o parceiro está vivo
                         print(f"[Rota elect] | [{node_name}] | 🕑 Loop while, perguntando se {peer} está vivo", flush=True)
                         requests.get(f"http://{peer}:8080/isalive", timeout=2)
+                    # Se não responder, significa que morreu durante a execução da região crítica e precisa avisar os demais
                     except requests.exceptions.RequestException as e:
-                        # Se não responder, significa que morreu durante a execução da região crítica e precisa avisar os demais
                         print(f"[Rota elect: WAIT Exception] | [{node_name}] | ❌ Falha na conexão com {peer}: {e}. Iniciando protocolo de peer_morto...", flush=True)  # Caso o peer esteja offline ou com erro
                         event_log.append(f"[Rota elect: WAIT Exception] | ❌ Falha na conexão com {peer}. Iniciando protocolo de peer_morto...")
                         dead_peer_protocol(peer)
                         continue
                 i+=1
-                
+        
+        # Caso não consiga comunicar com o peer, avisa os demais que ele está morto
         except Exception as e:
             print(f"[Rota elect: Exception] | [{node_name}] | ❌ Falha na conexão com {peer}: {e}", flush=True)  # Caso o peer esteja offline ou com erro
             event_log.append(f"[Rota elect: Exception] | ❌ Falha na conexão com {peer}")
             dead_peer_protocol(peer)
 
-            
     # Se recebeu OK de todos os peers (exceto ele mesmo), entra na RC
     if (ok_counter >= len(peer_list)):
         print(f'\n[Rota elect] | [{node_name}] | 🔔 Os {len(peer_list)} OKs foram obtidos! Entrando na RC...')
         event_log.append(f"[Rota elect] | 🔔 Os {len(peer_list)} OKs foram obtidos! Entrando na RC...")
         
-        critical_response = critical_region_request(node_name, client_message)
+        critical_response = critical_region_request(client_name, client_message) # Entrada na regiao critica
+
         print(f"[Rota elect] | [{node_name}] | 🔴 saiu da RC\n", flush=True)    
         event_log.append(f"[Rota elect] | 🔴 saí da RC")
 
     ready_to_continue  = False  # Reset da flag de parada
     has_client_request = False  # Reset da flag de cliente
     ok_counter         = 1      # Reset do contador de oks
+
 
     # Para cada nó do cluster que ficou em espera, envia um OK 
     print(f"[Rota elect] | [{node_name}] | 🔓 Liberando os outros nós", flush=True)
@@ -228,18 +233,20 @@ def elect():
         event_log.append(f"[Rota elect] | Liberando nó [{nodes['node']}]")
         
         requests.post(f'http://{nodes["node"]}.server:8080/release', json={"status": "OK"}, timeout=1)
-        # time.sleep(0.1)
+    
     print(f"[Rota elect] | [{node_name}] | 🚀 Nós liberados com sucesso!\n", flush=True)
     event_log.append(f"[Rota elect] | 🚀 Nós liberados com sucesso!")
 
-    # Reset da lista
+    # Reset da lista de nós adiados
     deferred_replies.clear() 
 
+    # Se a resposta do cluster store foi positiva, retora mensagem de commited ao cliente
     if critical_response == True:
         print(f"[Rota elect] | [{node_name}] | ✔️  Mandando a mensagem de commit para o cliente", flush=True)
         event_log.append(f"[Rota elect] | ✔️  Mandando a mensagem de commit para o cliente")
         return jsonify({"status": "COMMITED"}), 200
 
+    # Caso contrário, retorna not commited
     return jsonify({"status": "NOT_COMMITED"}), 500
 
 # Rota que atualiza os peers no caso de um morrer na RC. A rota é chamada quando um nó que recebeu WAIT tenta comunicar com outro e não consegue
@@ -253,11 +260,11 @@ def update_peers():
     print(f"\n[Rota update_peers] | [{node_name}] | 🔀 Atualizando nós vivos...", flush=True)
     event_log.append(f"[Rota update_peers] | 🔀 Atualizando nós vivos...")
     
-    # Retira o servidor da lista
+    # Retira o servidor da lista e retorna sucesso. Também altera a flag do loop para o caso de o peer morto ter 
+    # devolvido WAIT a algum peer e morrido enquanto usava a Região crítica
     peer_list.remove(dead_peer)
     ready_to_continue = True
     return "", 200
-
 
 # Rota chamada por outros nós do cluster pedindo permissão para acessar a região crítica
 @app.route("/request", methods=["POST"])
@@ -269,10 +276,10 @@ def on_request():
     their_ts    = message["timestamp"]
     their_node  = message["node"]
     
-    if has_client_request == False: # Caso em que o nó não possui nenhum pedido de cliente
+    # Caso em que o nó não possui nenhum pedido de cliente, retorna OK
+    if has_client_request == False: 
         event_log.append(f"Pedido de {their_node} recebido. O servidor {node_name} não possui cliente. Devolvendo OK...")
         return "", 200
-
 
     # Se o timestamp do meu cliente é menor do que o pedido, peça a ele para esperar
     print(f"\n[Rota request] | [{node_name}] | ✅ {their_node} está pedindo OK (ts_dele={their_ts:.4f}) - (ts_meu={my_client_timestamp:.4f}), array:", flush=True)
@@ -281,10 +288,14 @@ def on_request():
         print(f"[Rota request] | [{node_name}] | 🔁 [{node_name}] o timestamp do meu cliente é menor", flush=True)
         pending_node = {"timestamp": their_ts, "node": their_node}
         print(f"[Rota request] | [{node_name}] | NÓ PENDENTE: {pending_node}")
+        
+        # Adiciona o nó dentro da lista de nós adiados
         add_and_sort(pending_node)
+
         print(f'[Rota request] | Lista de pedidos: DEPOIS --> {deferred_replies}\n')
         event_log.append(f"Pedido de {their_node} recebido, com timestamp {their_ts:.4f}. O servidor {node_name} possui timestamp menor: {my_client_timestamp:.4f}. Devolvendo WAIT")
         
+        # Retorna o WAIT
         return "", 202
     
     else:
@@ -294,6 +305,7 @@ def on_request():
         
         event_log.append(f"Pedido de {their_node} recebido, com timestamp {their_ts:.4f}. O servidor {node_name} possui timestamp maior: {my_client_timestamp:.4f}. Devolvendo OK")
         
+        # Retorna OK
         return "", 200
     
 
@@ -308,6 +320,11 @@ def release():
     event_log.append(f"🔓 Release recebido. OK COUNT = {ok_counter}, quantidade de OKs necessarios: {len(peer_list)}")
     
     ready_to_continue = True
+    return "", 200
+
+# Rota que devolve a requisição de estabelecimento da conexão com os clientes
+@app.route("/isalive", methods=["GET"])
+def isalive():
     return "", 200
 
 # =================== ROTAS PARA A PAGINA WEB ===================
