@@ -76,12 +76,16 @@ def critical_region_request(name, message):
                 
             print(f"[critical_region] | [{node_name}] | Conversando com o servidor [db-{cs_node_selection}.db]", flush=True)
             event_log.append(f"[critical_region] | Conversando com o servidor [db-{cs_node_selection}.db]")
-            requests.post(f"http://db-{cs_node_selection}.db:8080/write_request", json={"node": name, "value": message}, timeout=1)
+            db_response = requests.post(f"http://db-{cs_node_selection}.db:8080/write_request", json={"node": name, "value": message}, timeout=1)
             
             # Se deu certo, sai do loop
-            print(f"[critical_region] | [{node_name}] | ✅ Utilizou a região crítica!\n", flush=True)
-            event_log.append(f"[critical_region] | ✅ Utilizei a região crítica!")
-            return True
+            if db_response.status_code == 200: 
+                print(f"[critical_region] | [{node_name}] | ✅ Utilizou a região crítica!\n", flush=True)
+                event_log.append(f"[critical_region] | ✅ Utilizei a região crítica!")
+                return True
+            else:
+                print(f"[critical_region] | [{node_name}] | ❌ Erro ao usar a regiao critica", flush=True)
+                
 
         # Caso não seja possível comunicar com o pod, tenta conexão com o outro nó do cluster store.
         except requests.exceptions.RequestException:
@@ -100,29 +104,12 @@ def critical_region_request(name, message):
             
     return False
 
-# def dead_peer_protocol(dead_peer):
-#     global peer_list, node_name
-    
-#     # Remove o peer morto e notifica os demais
-#     peer_list.remove(dead_peer)
-#     for peer in peer_list:
-#         if peer.startswith(node_name): # Não envia para si mesmo
-#             continue
-#         try:
-#             requests.post(f"http://db-{peer}.db:8080/update_peers", json={"dead_peer": dead_peer}, timeout=1)
-#         except requests.exceptions.RequestException as e:
-#             print(f"[dead_peer_protocol: Exception] | [{node_name}] | ❌ Falha na conexão com {peer}: {e}", flush=True)
-#             event_log.append(f"[dead_peer_protocol: Exception] | ❌ Erro: Falha na conexão com {peer}")
-
-#             # dead_peer_protocol(peer)
-#     return
-
 def dead_peer_protocol(dead_peer):
     global peer_list, node_name
     
     # Remove o peer morto
     peer_list.remove(dead_peer)
-    print(f"[{node_name}] Removendo peer morto: {dead_peer}")
+    print(f"[dead_peer_protocol] | [{node_name}] | Removendo peer morto: {dead_peer}")
     
     # Coleta todos os peers que falharam na notificação
     failed_peers = []
@@ -142,6 +129,7 @@ def dead_peer_protocol(dead_peer):
     for failed_peer in failed_peers:
         if failed_peer in peer_list:
             peer_list.remove(failed_peer)
+            print(f"[dead_peer_protocol] | [{node_name}] | Removendo peer {failed_peer} (falhou na notificação)")
             event_log.append(f"[{node_name}] Removendo peer {failed_peer} (falhou na notificação)")
 
 # =================== ROTAS PARA O PROTOCOLO DE COMUNICACAO ===================
@@ -150,18 +138,6 @@ def dead_peer_protocol(dead_peer):
 @app.route("/isalive", methods=["GET"])
 def isalive():
     return "", 200
-
-# @app.route("/attempt", methods=["GET"])
-# def attempt():
-#     data = request.json                 # Recebimento de dados do cliente
-#     my_client_timestamp = data.get("timestamp")    # Obtendo timestamp do cliente
-#     client_name         = data.get("client_name")  # Obtendo nome do cliente
-#     client_message      = data.get("value")        # Obtendo mensagem do cliente
-#     if has_client_request:
-#         response = requests.post(f"http://localhost:8080/elect", json={"timestamp": my_client_timestamp, "client_name": client_name, "value":client_message})
-#         return response.text, response.status_code
-#     else:
-#         return "", 400
 
 # Rota chamada por um cliente para iniciar uma tentativa de acesso à região crítica
 @app.route("/elect", methods=["POST"])
@@ -178,9 +154,12 @@ def elect():
     
 
     # Para cada nó do cluster sync, enviar um pedido com o timestamp do cliente:
-    for peer in peer_list:
+    i=0
+    while i < len(peer_list):
+        peer = peer_list[i]
         # Não envia solicitação para si mesmo
         if peer.startswith(node_name):
+            i += 1
             continue
         
         ready_to_continue = False
@@ -192,13 +171,15 @@ def elect():
             event_log.append(f"[Rota elect] | PEDINDO OK PARA O SERVIDOR: {peer}")
 
             peers_response = requests.post(f"http://{peer}:8080/request", json={"timestamp": my_client_timestamp,"node": node_name}, timeout=1)
-            # time.sleep(0.1)
+            time.sleep(0.1)
 
             # Se recebeu "OK", sobe o contador de oks
             if peers_response.status_code == 200:  
                 ok_counter += 1
+                i += 1
                 print(f'[Rota elect] | [{node_name}] | 🆗 recebeu OK de {peer} --> {ok_counter}')
                 event_log.append(f"[Rota elect] | 🆗 recebi OK de {peer} --> {ok_counter}")
+                
                 
             # Se recebeu "WAIT"
             if peers_response.status_code == 202:  
@@ -209,18 +190,19 @@ def elect():
                     time.sleep(0.1)  # Espera 100ms antes de checar novamente
                     try:
                         # Verifica se o parceiro está vivo
+                        print(f"[Rota elect] | [{node_name}] | 🕑 Loop while, perguntando se {peer} está vivo", flush=True)
                         requests.get(f"http://{peer}:8080/isalive", timeout=2)
                     except requests.exceptions.RequestException as e:
                         # Se não responder, significa que morreu durante a execução da região crítica e precisa avisar os demais
                         print(f"[Rota elect: WAIT Exception] | [{node_name}] | ❌ Falha na conexão com {peer}: {e}. Iniciando protocolo de peer_morto...", flush=True)  # Caso o peer esteja offline ou com erro
                         event_log.append(f"[Rota elect: WAIT Exception] | ❌ Falha na conexão com {peer}. Iniciando protocolo de peer_morto...")
-
                         dead_peer_protocol(peer)
-
+                        continue
+                i+=1
+                
         except Exception as e:
             print(f"[Rota elect: Exception] | [{node_name}] | ❌ Falha na conexão com {peer}: {e}", flush=True)  # Caso o peer esteja offline ou com erro
             event_log.append(f"[Rota elect: Exception] | ❌ Falha na conexão com {peer}")
-            
             dead_peer_protocol(peer)
 
             
@@ -253,14 +235,12 @@ def elect():
     # Reset da lista
     deferred_replies.clear() 
 
-    print(f"[Rota elect] | [{node_name}] | ✔️  Mandando a mensagem de commit para o cliente", flush=True)
-    event_log.append(f"[Rota elect] | ✔️  Mandando a mensagem de commit para o cliente")
-
     if critical_response == True:
-        return jsonify({"status": "COMITTED"}), 200
+        print(f"[Rota elect] | [{node_name}] | ✔️  Mandando a mensagem de commit para o cliente", flush=True)
+        event_log.append(f"[Rota elect] | ✔️  Mandando a mensagem de commit para o cliente")
+        return jsonify({"status": "COMMITED"}), 200
 
-    return jsonify({"status": "NOT_COMITTED"}), 500
-
+    return jsonify({"status": "NOT_COMMITED"}), 500
 
 # Rota que atualiza os peers no caso de um morrer na RC. A rota é chamada quando um nó que recebeu WAIT tenta comunicar com outro e não consegue
 @app.route("/update_peers", methods=["POST"])

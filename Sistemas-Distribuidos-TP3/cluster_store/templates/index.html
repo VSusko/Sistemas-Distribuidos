@@ -18,11 +18,27 @@
         📌 Este nó: <b>{{ node_name }}</b> |
         Primário: <b>{{ primary_node }}</b> |
         Status:
-        {% if is_primary %}
-            👑 Primário
+        {% set roles = [] %}
+        
+        {% if is_primary_create %}
+            {% set _ = roles.append("👑 Primário de Create") %}
         {% else %}
-            🔄 Réplica
+            {% set _ = roles.append("🔄 Réplica de Create") %}
         {% endif %}
+
+        {% if is_primary_update %}
+            {% set _ = roles.append("👑 Primário de Update") %}
+        {% else %}
+            {% set _ = roles.append("🔄 Réplica de Update") %}
+        {% endif %}
+
+        {% if is_primary_delete %}
+            {% set _ = roles.append("👑 Primário de Delete") %}
+        {% else %}
+            {% set _ = roles.append("🔄 Réplica de Delete") %}
+        {% endif %}
+
+        {{ roles|join(" | ") }}
     </div>
 
     <table>

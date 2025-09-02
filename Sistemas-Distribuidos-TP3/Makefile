@@ -1,7 +1,7 @@
-IMAGE_CLIENT = cristianomafuz/client:tp3
-IMAGE_INTERACTIVE_CLIENT = cristianomafuz/client-interactive:tp3
-IMAGE_SERVER = cristianomafuz/server:tp3
-IMAGE_CLUSTER_STORE = cristianomafuz/cluster_store:tp3
+IMAGE_CLIENT = victorsusko/client:tp3
+IMAGE_INTERACTIVE_CLIENT = victorsusko/client-interactive:tp3
+IMAGE_SERVER = victorsusko/server:tp3
+IMAGE_CLUSTER_STORE = victorsusko/cluster_store:tp3
 
 # =================== Comandos para construcao do sistema =================== 
 
@@ -15,7 +15,10 @@ build-client:
 push-client:
 	docker push $(IMAGE_CLIENT)
 
-build-push-client: build-client push-client
+bp-client: build-client push-client
+
+li-client: 
+	kind load docker-image $(IMAGE_CLIENT)
 
 # --- Regras do Cliente interativo ---
 build-i_client:
@@ -24,7 +27,10 @@ build-i_client:
 push-i_client:
 	docker push $(IMAGE_INTERACTIVE_CLIENT)
 
-build-push-i-client: build-i_client push-i_client
+bp-i-client: build-i_client push-i_client
+
+li-i-client: 
+	kind load docker-image $(IMAGE_INTERACTIVE_CLIENT)
 
 # --- Regras do Servidor ---
 build-server:
@@ -33,7 +39,10 @@ build-server:
 push-server:
 	docker push $(IMAGE_SERVER)
 
-build-push-server: build-server push-server
+bp-server: build-server push-server
+
+li-server: 
+	kind load docker-image $(IMAGE_SERVER)
 
 # --- Regras do db backup---
 build-db:
@@ -42,7 +51,10 @@ build-db:
 push-db:
 	docker push $(IMAGE_CLUSTER_STORE)
 
-build-push-db: build-db push-db
+bp-db: build-db push-db
+
+li-db: 
+	kind load docker-image $(IMAGE_CLUSTER_STORE)
 
 # ------ Regras de conveniência ------
 delete:
@@ -66,13 +78,13 @@ restart-cluster:
 	kind create cluster --config kubernetes/kind-config.yaml
 
 # Para fazer o build e push de todos os componentes
-build-push: build-push-client build-push-server build-push-db build-push-i-client
+bp: bp-client bp-server bp-db bp-i-client
 
 # Para criar os pods
 apply: apply-server apply-client apply-db
 
 # Para fazer todos os builds, pushes e criar todos os pods
-b-apply: build-push apply
+b-apply: bp apply
 
 # Para deletar todos os pods e posteriormente fazer build,push e criação
 restart: restart-cluster b-apply
@@ -112,7 +124,7 @@ gets4:
 
 # Mostrar logs dos servidores do store
 getd0:
-	kubectl logs db-0 -f
+	kubectl logs db-0
 getd1:
 	kubectl logs db-1
 getd2:

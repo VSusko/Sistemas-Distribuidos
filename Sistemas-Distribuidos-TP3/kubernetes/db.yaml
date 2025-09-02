@@ -29,7 +29,7 @@ spec:
       terminationGracePeriodSeconds: 0   # Mata os pods imediatamente
       containers:
       - name: db
-        image: cristianomafuz/cluster_store:tp3
+        image: victorsusko/cluster_store:tp3
         ports:
         - containerPort: 8080
         env:

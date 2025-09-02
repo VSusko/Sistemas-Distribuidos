@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
       - name: db
-        image: cristianomafuz/db_primary:tp3
+        image: victorsusko/db_primary:tp3
         ports:
         - containerPort: 8080
         env:

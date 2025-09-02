@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
       - name: server
-        image: cristianomafuz/server:tp3
+        image: victorsusko/server:tp3
         ports:
         - containerPort: 8080
         env:

@@ -25,24 +25,23 @@ for i in range(5):
 
         time.sleep(1)  # Espera 1 segundo antes de tentar de novo
 
-preferred_server_ordinal = int(pod_name.split("-")[-1]) # Extrai o número final do nome do pod (preferred_server_ordinal), ex: "client-2" → 2
+preferred_server_ordinal = int(pod_name.split("-")[-1])        # Extrai o número final do nome do pod (preferred_server_ordinal), ex: "client-2" → 2
 preferred_server = f"server-{preferred_server_ordinal}.server" # Define o nome do servidor com base no preferred_server_ordinal, ex: server-2.server
-commit_counter = 0         # Variavel que conta os commits
+commit_counter   = 0       # Variavel que conta os commits
 server_max_nodes = 5       # Variavel do numero maximo de servidores
 server_nodes_selected = [] # Lista que armazena quais nós foram tentados
 
-command_list = ["create", "update", "delete"]
+command_list = ["create", "append", "delete"] # Lista de comandos os quais os clientes podem fazer
 
 # Loop infinito: envia uma requisição a cada 5 segundos
 while commit_counter < TOTAL_COMMITS:
     
-    command_selection = random.randint(0, 2)
-    # message               = f"{pod_name}: string{commit_counter}" # Gera uma string qualquer para enviar
+    command_selection = random.randint(0, 2) # Seleciona um comando aleatorio
     message               = f"{command_list[command_selection]} string{commit_counter}" # Gera uma string qualquer para enviar
-    timestamp             = time.time()   # Gera um timestamp atual
+    timestamp             = time.time()                 # Gera um timestamp atual
     server_node_selection = preferred_server_ordinal    # Escolhe o nó preferido  
-    target_server         = preferred_server  # O primeiro servidor a ser tentado é o de numero correspondente ao cliente
-    success               = False             # Flag que controla o loop de requisições.
+    target_server         = preferred_server            # O primeiro servidor a ser tentado é o de numero correspondente ao cliente
+    success               = False                       # Flag que controla o loop de requisições.
     
     print(f"\n[Request] | [{pod_name}] | 🟡 Tentativa de escrita número {commit_counter} | msg: '{message}'")
     
@@ -63,7 +62,8 @@ while commit_counter < TOTAL_COMMITS:
             print(f"[Request Exception] | [{pod_name}] | ❌ Erro {e} na conexão com o servidor {target_server}", flush=True)
 
             # Adicionando o nó na lista de selecionados
-            server_nodes_selected.append(server_node_selection)
+            server_nodes_selected.append(server_node_selection) 
+
             # Se a lista de servidores ultrapassar o tamanho máximo, reseta a lista e renicia o processo
             if len(server_nodes_selected) >= server_max_nodes:
                 print(f"[Request Exception] | [{pod_name}] | ⏳ Nenhum servidor respondeu, aguardando...")
@@ -76,7 +76,8 @@ while commit_counter < TOTAL_COMMITS:
                     server_node_selection = random.randint(0, server_max_nodes - 1)
                 target_server = f"server-{server_node_selection}.server"
 
+    # Dorme de 1 a 5 segundos antes de pedir novamente
     time.sleep(random.randint(1, 5))
-    
-    commit_counter += 1 # Incrementando o contador de commit
 
+    # Incrementando o contador de commit
+    commit_counter += 1 
