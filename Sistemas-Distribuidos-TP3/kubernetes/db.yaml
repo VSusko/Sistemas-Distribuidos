@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: db 
+spec:
+  clusterIP: None
+  selector:
+    app: db
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: db 
+spec:
+  serviceName: "db"
+  replicas: 3
+  podManagementPolicy: Parallel   # Permite gerenciar pods fora da ordem
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      terminationGracePeriodSeconds: 0   # Mata os pods imediatamente
+      containers:
+      - name: db
+        image: victorsusko/cluster_store:tp3
+        ports:
+        - containerPort: 8080
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: PEERS
+          value: "db-0.db,db-1.db,db-2.db"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-0-nodeport
+spec:
+  selector:
+    statefulset.kubernetes.io/pod-name: db-0
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30091
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-1-nodeport
+spec:
+  selector:
+    statefulset.kubernetes.io/pod-name: db-1
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30092
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-2-nodeport
+spec:
+  selector:
+    statefulset.kubernetes.io/pod-name: db-2
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30093
