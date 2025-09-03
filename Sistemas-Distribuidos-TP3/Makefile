@@ -142,22 +142,22 @@ deactivate-db-2:
 
 # Teste 1: "deletar" um nó primario quando os 3 estão vivos. OBS: o kubernetes nao deixa deletar um nó que nao seja o ultimo. Por isso,
 #  apenas faz com que o pod fique inativo
-testdb1: deactivate-db-2
+testdb0: deactivate-db-0
 
-# Teste 2: deletar o nó primário de novo apos o teste1
-testdb2: deactivate-db-2 deactivate-db-1
+# Teste 2: Deletar o nó 1 do db
+testdb1: deactivate-db-1
 
-# Teste 3: "deletar" um nó secundario quando os 3 estão vivos
-testdb3: deactivate-db-0
+# Teste 3: Deletar o nó 2 do db
+testdb2: deactivate-db-2
 
-# Teste 4: deletar um nó secundario apos o teste 3
-testdb4: deactivate-db-0 deactivate-db-1
+# Teste 2: Deletar os nós 0 e 1 do db
+testdb3: deactivate-db-0 deactivate-db-1
 
-# Teste 5: deletar o no 0 depois o 2
-testdb5: deactivate-db-0 deactivate-db-2
+# Teste 4: Deletar os nós 0 e 2 do db
+testdb4: deactivate-db-0 deactivate-db-2
 
-# Teste 6: deletar o nó 1 e depois o 2
-testdb6: deactivate-db-1 deactivate-db-2
+# Teste 5: Deletar os nós 1 e 2 do db
+testdb5: deactivate-db-1 deactivate-db-2
 
 # Comandos para desativar os pods do cluster sync
 deactivate-sv-0:
@@ -180,5 +180,11 @@ testsv2: deactivate-sv-0 deactivate-sv-1
 # Teste 3: deletar 3 nós
 testsv3: deactivate-sv-0 deactivate-sv-1 deactivate-sv-2
 
-# Teste 4: deletar 4 nós
+# Teste 4: deletar os 4 primeiros nós
 testsv4: deactivate-sv-0 deactivate-sv-1 deactivate-sv-2 deactivate-sv-3
+
+# Teste 5: deletar os 4 ultimos nós
+testsv5: deactivate-sv-1 deactivate-sv-2 deactivate-sv-3 deactivate-sv-4
+
+# Teste 6: deletar os 4 aleatorios
+testsv6: deactivate-sv-0 deactivate-sv-2 deactivate-sv-3 deactivate-sv-4
