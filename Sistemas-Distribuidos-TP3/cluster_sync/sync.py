@@ -53,94 +53,6 @@ for i in range(cs_max_nodes):
 
         time.sleep(1)  # Espera 1 segundo antes de tentar de novo
 
-
-# =================== FUNCOES AUXILIARES ===================
-
-# Função que adiciona um nó na lista de dicionário [timestamp, node] e depois ordena
-def add_and_sort(new_request):
-    global deferred_replies
-    deferred_replies.append(new_request)
-
-    # Ordena a lista com base no timestamp
-    deferred_replies.sort(key=lambda x: (x["timestamp"], x["node"]))  # desempata pelo nome do nó
-
-# Função que realiza a requisição à região crítica
-def critical_region_request(name, message):
-    global cs_max_nodes
-    
-    attempts          = 0       # Variável que controla quantas tentativas de requisição ao banco de dados serão feitas. 
-    cs_nodes_selected = []      # Lista que armazena quais nós foram tentados
-    cs_node_selection = random.randint(0, (cs_max_nodes-1)) # Sorteia uma servidor aleatório para requisitar
-
-    # Enquanto não forem feito 5 tentativas...
-    while attempts < 5:
-        try:
-            # Sorteia outro nó do cluster store aleatoriamente para enviar o pedido, caso tenha falhado no pedido anterior 
-            while cs_node_selection in cs_nodes_selected:
-                cs_node_selection = random.randint(0, (cs_max_nodes-1))
-            
-            print(f"[critical_region] | [{node_name}] | Conversando com o servidor [db-{cs_node_selection}.db]", flush=True)
-            event_log.append(f"[critical_region] | Conversando com o servidor [db-{cs_node_selection}.db]")
-            # Tenta enviar pedido ao cluster store
-            db_response = requests.post(f"http://db-{cs_node_selection}.db:8080/write_request", json={"node": name, "value": message}, timeout=1)
-            
-            # Se deu certo, sai do loop 
-            if db_response.status_code == 200: 
-                print(f"[critical_region] | [{node_name}] | ✅ Utilizou a região crítica!\n", flush=True)
-                event_log.append(f"[critical_region] | ✅ Utilizei a região crítica!")
-                return True
-            # Se não deu certo, mas obteve uma resposta mostra erro
-            else:
-                print(f"[critical_region] | [{node_name}] | ❌ Erro ao usar a regiao critica", flush=True)
-                
-        # Caso não seja possível comunicar com o servidor, tenta conexão com o outro nó do cluster store.
-        except requests.exceptions.RequestException:
-            print(f"[critical_region: Exception] | [{node_name}] | ❌ Erro: Não foi possível conectar ao servidor [db-{cs_node_selection}.db]", flush=True)
-            event_log.append(f"[critical_region: Exception] | ❌ Erro: Não foi possível conectar ao servidor [db-{cs_node_selection}.db]")
-
-            # Adicionando o servidor na lista de selecionados
-            cs_nodes_selected.append(cs_node_selection)
-            
-            # Se todos os nós já foram tentados, espera alguns segundos antes de tentar outra conexão e reseta a lista de servidores
-            if len(cs_nodes_selected) >= cs_max_nodes:
-                print(f"[critical_region: Exception] | [{node_name}] | ⏳ Nenhum servidor respondeu, aguardando...", flush=True)
-                time.sleep(2)
-                cs_nodes_selected.clear()
-            
-            attempts += 1 # Incremento do contador    
-    
-    # Retorna falso, caso não consiga contactar algum servidor
-    return False
-
-# Função que realiza o protocolo de um peer morto
-def dead_peer_protocol(dead_peer):
-    global peer_list, node_name, ready_to_continue
-    
-    # Remove o peer morto da lista de peers
-    peer_list.remove(dead_peer)
-    print(f"[dead_peer_protocol] | [{node_name}] | Removendo peer morto: {dead_peer}")
-    
-    failed_peers = [] # Lista para coletar todos os peers que falharam na notificação
-    peers_to_notify = [p for p in peer_list if not p.startswith(node_name)] # Lista que tem todos os peers menos o próprio nó
-    ready_to_continue = True # Destravando o próprio nó
-
-    for peer in peers_to_notify:
-        # Tenta contactar o peer da morte do outro
-        try:
-            requests.post(f"http://{peer}:8080/update_peers", json={"dead_peer": dead_peer}, timeout=2)
-        # Caso nào seja possível, adiciona o peer na lista de peers que falharam
-        except requests.exceptions.RequestException as e:
-            print(f"[dead_peer_protocol: Exception] | [{node_name}] | ❌ Falha na conexão com {peer}: {e}", flush=True)
-            event_log.append(f"[dead_peer_protocol: Exception] | ❌ Erro: Falha na conexão com {peer}")
-            failed_peers.append(peer)
-    
-    # Remove todos os peers que também falharam 
-    for failed_peer in failed_peers:
-        if failed_peer in peer_list:
-            peer_list.remove(failed_peer)
-            print(f"[dead_peer_protocol] | [{node_name}] | Removendo peer {failed_peer} (falhou na notificação)")
-            event_log.append(f"[{node_name}] Removendo peer {failed_peer} (falhou na notificação)")
-
 # =================== ROTAS PARA O PROTOCOLO DE COMUNICACAO ===================
    
 # Rota chamada por um cliente para iniciar uma tentativa de acesso à região crítica
@@ -163,6 +75,7 @@ def elect():
         peer = peer_list[i]
         # Não envia solicitação para si mesmo
         if peer.startswith(node_name):
+            print(f"DEBUG | Peer = {peer}, node_name = {node_name}")
             i += 1
             continue
         
@@ -181,9 +94,9 @@ def elect():
             # Se recebeu "OK", sobe o contador de oks
             if peers_response.status_code == 200:  
                 ok_counter += 1
-                i += 1
                 print(f'[Rota elect] | [{node_name}] | 🆗 recebeu OK de {peer} --> {ok_counter}')
                 event_log.append(f"[Rota elect] | 🆗 recebi OK de {peer} --> {ok_counter}")
+                i += 1
                 
             # Se recebeu "WAIT"
             if peers_response.status_code == 202:  
@@ -263,7 +176,8 @@ def update_peers():
     
     # Retira o servidor da lista e retorna sucesso. Também altera a flag do loop para o caso de o peer morto ter 
     # devolvido WAIT a algum peer e morrido enquanto usava a Região crítica
-    peer_list.remove(dead_peer)
+    if dead_peer in peer_list:
+        peer_list.remove(dead_peer)
     ready_to_continue = True
     return "", 200
 
@@ -309,7 +223,6 @@ def on_request():
         # Retorna OK
         return "", 200
     
-
 # Rota chamada para o recebimento de oks de outros nós
 @app.route("/release", methods=["POST"])
 def release():
@@ -327,6 +240,87 @@ def release():
 @app.route("/isalive", methods=["GET"])
 def isalive():
     return "", 200
+
+# =================== FUNCOES AUXILIARES ===================
+
+# Função que adiciona um nó na lista de dicionário [timestamp, node] e depois ordena
+def add_and_sort(new_request):
+    global deferred_replies
+    deferred_replies.append(new_request)
+
+    # Ordena a lista com base no timestamp
+    deferred_replies.sort(key=lambda x: (x["timestamp"], x["node"]))  # desempata pelo nome do nó
+
+# Função que realiza a requisição à região crítica
+def critical_region_request(name, message):
+    global cs_max_nodes
+    
+    attempts          = 0       # Variável que controla quantas tentativas de requisição ao banco de dados serão feitas. 
+    cs_nodes_selected = []      # Lista que armazena quais nós foram tentados
+    cs_node_selection = random.randint(0, (cs_max_nodes-1)) # Sorteia uma servidor aleatório para requisitar
+
+    # Enquanto não forem feito 5 tentativas...
+    while attempts < 5:
+        try:
+            # Sorteia outro nó do cluster store aleatoriamente para enviar o pedido, caso tenha falhado no pedido anterior 
+            while cs_node_selection in cs_nodes_selected:
+                cs_node_selection = random.randint(0, (cs_max_nodes-1))
+            
+            print(f"[critical_region] | [{node_name}] | Conversando com o servidor [db-{cs_node_selection}.db]", flush=True)
+            event_log.append(f"[critical_region] | Conversando com o servidor [db-{cs_node_selection}.db]")
+            # Tenta enviar pedido ao cluster store
+            db_response = requests.post(f"http://db-{cs_node_selection}.db:8080/write_request", json={"node": name, "value": message}, timeout=1)
+            
+            # Se deu certo, sai do loop 
+            if db_response.status_code == 200: 
+                print(f"[critical_region] | [{node_name}] | ✅ Utilizou a região crítica!\n", flush=True)
+                event_log.append(f"[critical_region] | ✅ Utilizei a região crítica!")
+                return True
+            # Se não deu certo, mas obteve uma resposta mostra erro
+            else:
+                print(f"[critical_region] | [{node_name}] | ❌ Erro ao usar a regiao critica", flush=True)
+                
+        # Caso não seja possível comunicar com o servidor, tenta conexão com o outro nó do cluster store.
+        except requests.exceptions.RequestException:
+            print(f"[critical_region: Exception] | [{node_name}] | ❌ Erro: Não foi possível conectar ao servidor [db-{cs_node_selection}.db]", flush=True)
+            event_log.append(f"[critical_region: Exception] | ❌ Erro: Não foi possível conectar ao servidor [db-{cs_node_selection}.db]")
+
+            # Adicionando o servidor na lista de selecionados
+            cs_nodes_selected.append(cs_node_selection)
+            
+            # Se todos os nós já foram tentados, espera alguns segundos antes de tentar outra conexão e reseta a lista de servidores
+            if len(cs_nodes_selected) >= cs_max_nodes:
+                print(f"[critical_region: Exception] | [{node_name}] | ⏳ Nenhum servidor respondeu, aguardando...", flush=True)
+                time.sleep(2)
+                cs_nodes_selected.clear()
+            
+            attempts += 1 # Incremento do contador    
+    
+    # Retorna falso, caso não consiga contactar algum servidor
+    return False
+
+# Função que realiza o protocolo de um peer morto
+def dead_peer_protocol(dead_peer):
+    global peer_list, node_name, ready_to_continue
+    
+    # Remove o peer morto da lista de peers
+    if dead_peer in peer_list:
+        peer_list.remove(dead_peer)
+    print(f"[dead_peer_protocol] | [{node_name}] | Removendo peer morto: {dead_peer}")
+    
+    ready_to_continue = True # Destravando o próprio nó
+
+    for peer in peer_list:
+        # Não envia para si mesmo
+        if peer == node_name:
+            continue
+        # Tenta contactar o peer da morte do outro
+        try:
+            requests.post(f"http://{peer}:8080/update_peers", json={"dead_peer": dead_peer}, timeout=2)
+        # Caso nào seja possível, adiciona o peer na lista de peers que falharam
+        except requests.exceptions.RequestException as e:
+            print(f"[dead_peer_protocol: Exception] | [{node_name}] | ❌ Falha na conexão com {peer}: {e}", flush=True)
+            event_log.append(f"[dead_peer_protocol: Exception] | ❌ Erro: Falha na conexão com {peer}")
 
 # =================== ROTAS PARA A PAGINA WEB ===================
 
