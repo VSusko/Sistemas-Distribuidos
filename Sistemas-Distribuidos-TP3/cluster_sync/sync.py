@@ -114,7 +114,7 @@ def critical_region_request(name, message):
 
 # Função que realiza o protocolo de um peer morto
 def dead_peer_protocol(dead_peer):
-    global peer_list, node_name
+    global peer_list, node_name, ready_to_continue
     
     # Remove o peer morto da lista de peers
     peer_list.remove(dead_peer)
@@ -122,7 +122,8 @@ def dead_peer_protocol(dead_peer):
     
     failed_peers = [] # Lista para coletar todos os peers que falharam na notificação
     peers_to_notify = [p for p in peer_list if not p.startswith(node_name)] # Lista que tem todos os peers menos o próprio nó
-    
+    ready_to_continue = True # Destravando o próprio nó
+
     for peer in peers_to_notify:
         # Tenta contactar o peer da morte do outro
         try:
