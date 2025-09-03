@@ -15,7 +15,6 @@ nodes:
         hostPort: 30084
       - containerPort: 30085
         hostPort: 30085
-      # Adicionando seus NodePorts do cluster_store
       - containerPort: 30091
         hostPort: 30091
       - containerPort: 30092
