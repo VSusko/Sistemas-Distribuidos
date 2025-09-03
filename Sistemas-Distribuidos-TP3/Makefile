@@ -188,3 +188,16 @@ testsv5: deactivate-sv-1 deactivate-sv-2 deactivate-sv-3 deactivate-sv-4
 
 # Teste 6: deletar os 4 aleatorios
 testsv6: deactivate-sv-0 deactivate-sv-2 deactivate-sv-3 deactivate-sv-4
+
+# -----Testes gerais:-----
+# Test1: primeiro sync todo (menos o 4), depois store todo (menos o 1)
+test1: deactivate-sv-0 deactivate-sv-1 deactivate-sv-2 deactivate-sv-3 deactivate-db-0 deactivate-db-2
+
+# Test2: primeiro store todo (menos o 0), depois sync todo (menos o 2)
+test2: deactivate-db-1 deactivate-db-2 deactivate-sv-0 deactivate-sv-3 deactivate-sv-4 deactivate-sv-1 
+
+# Test3: intercalando
+test3: deactivate-sv-0 deactivate-db-1 deactivate-sv-2 deactivate-db-0 deactivate-sv-1 deactivate-sv-4
+
+# Test4: intercalando de novo
+test4: deactivate-db-2 deactivate-sv-2 deactivate-sv-3 deactivate-db-0 deactivate-sv-0
