@@ -25,10 +25,10 @@
             {% set _ = roles.append("🔄 Réplica de Create") %}
         {% endif %}
 
-        {% if is_primary_update %}
-            {% set _ = roles.append("👑 Primário de Update") %}
+        {% if is_primary_append %}
+            {% set _ = roles.append("👑 Primário de Append") %}
         {% else %}
-            {% set _ = roles.append("🔄 Réplica de Update") %}
+            {% set _ = roles.append("🔄 Réplica de Append") %}
         {% endif %}
 
         {% if is_primary_delete %}

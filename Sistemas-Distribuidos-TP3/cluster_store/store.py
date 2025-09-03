@@ -243,10 +243,10 @@ def index():
         clients_database=clients_database,
         node_name=node_name,
         primary_node_create=primary_nodes[0],
-        primary_node_update=primary_nodes[1],
+        primary_node_append=primary_nodes[1],
         primary_node_delete=primary_nodes[2],
         is_primary_create=is_primary[0],
-        is_primary_update=is_primary[1],
+        is_primary_append=is_primary[1],
         is_primary_delete=is_primary[2]
     )
 
